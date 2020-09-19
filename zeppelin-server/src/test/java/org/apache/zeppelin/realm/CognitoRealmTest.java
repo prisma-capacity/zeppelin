@@ -28,25 +28,30 @@ import java.net.URL;
 import static org.junit.Assert.*;
 
 public class CognitoRealmTest {
+
     ZeppelinConfiguration zeppelinConfiguration;
-
-    @Before
-    public void clearSystemVariables() {
-        System.clearProperty(ZeppelinConfiguration.ConfVars.ZEPPELIN_NOTEBOOK_DIR.getVarName());
-    }
-
+    CognitoRealm cognito;
     @Before
     public void setup() throws Exception {
-        URL shiroPath = this.getClass().getResource("/shiro.ini");
-        System.out.println(shiroPath);
-        zeppelinConfiguration = new ZeppelinConfiguration(shiroPath);
+        URL resourcePath = this.getClass().getClassLoader().getResource("zeppelin-site.xml");
+        zeppelinConfiguration = new ZeppelinConfiguration(resourcePath);
+        cognito = new CognitoRealm();
     }
 
     @Test
-    public void testGetIniInformation(){
-        CognitoRealm cognito = new CognitoRealm(zeppelinConfiguration);
+    public void testGetIniInformation() {
         assertEquals("123456789", cognito.getUserPoolClientId());
         assertEquals("12345678", cognito.getUserPoolId());
         assertEquals("https://test.com", cognito.getUserPoolUrl());
+    }
+
+    @Test
+    public void testIfCognitoURLIsValid() {
+        assertEquals(true, cognito.isCognitoUrlValid("https://test.com"));
+    }
+
+    @Test
+    public void testIfCognitoURLIsNotValid() {
+        assertEquals(false, cognito.isCognitoUrlValid("saddfsdf"));
     }
 }
