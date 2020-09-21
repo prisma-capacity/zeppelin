@@ -17,6 +17,11 @@
 package org.apache.zeppelin.realm;
 
 
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
+import com.amazonaws.services.cognitoidp.model.ListUsersRequest;
+import com.amazonaws.services.cognitoidp.model.ListUsersResult;
 import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.AuthenticationException;
@@ -34,6 +39,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.REGION;
+
 /**
  * A {@code Realm} implementation that uses the CognitoRealm to authenticate users.
  *
@@ -43,6 +50,11 @@ public class CognitoRealm extends AuthorizingRealm {
   private String userPoolId;
   private String userPoolUrl;
   private String userPoolClientId;
+
+  private AWSCognitoIdentityProvider cognitoIdentityProvider = AWSCognitoIdentityProviderClientBuilder
+          .standard()
+          .withRegion("eu-central-1")
+          .build();
 
   public CognitoRealm() {
     super();
@@ -64,7 +76,18 @@ public class CognitoRealm extends AuthorizingRealm {
     UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
     LOG.info("username: " + userInfo.getUsername());
     LOG.info("password: " + userInfo.getPassword());
+
+    ListUsersRequest request = new ListUsersRequest();
+    request.setUserPoolId(userPoolId);
+
+    LOG.info("User List: " + cognitoIdentityProvider.listUsers(request));
     return null;
+  }
+
+  protected ListUsersResult getUserList(){
+    ListUsersRequest listUsersRequest = new ListUsersRequest();
+    listUsersRequest.setUserPoolId(userPoolId);
+    return cognitoIdentityProvider.listUsers(listUsersRequest);
   }
 
   /**
@@ -143,5 +166,9 @@ public class CognitoRealm extends AuthorizingRealm {
 
   public void setUserPoolClientId(String userPoolClientId) {
     this.userPoolClientId = userPoolClientId;
+  }
+
+  public AWSCognitoIdentityProvider getCognitoIdentityProvider() {
+    return cognitoIdentityProvider;
   }
 }

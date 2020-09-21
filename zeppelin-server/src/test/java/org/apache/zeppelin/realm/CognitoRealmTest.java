@@ -18,6 +18,8 @@
  */
 package org.apache.zeppelin.realm;
 
+import org.apache.shiro.config.Ini;
+import org.apache.shiro.realm.text.IniRealm;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.service.ShiroAuthenticationService;
 import org.junit.Before;
@@ -33,9 +35,13 @@ public class CognitoRealmTest {
     CognitoRealm cognito;
     @Before
     public void setup() throws Exception {
-        URL resourcePath = this.getClass().getClassLoader().getResource("zeppelin-site.xml");
-        zeppelinConfiguration = new ZeppelinConfiguration(resourcePath);
+        URL resourcePath = this.getClass().getClassLoader().getResource("shiro.ini");
         cognito = new CognitoRealm();
+        IniRealm iniRealm = new IniRealm(resourcePath.getPath());
+        Ini ini = iniRealm.getIni();
+        cognito.setUserPoolClientId(ini.getSectionProperty("main", "cognitoRealm.userPoolClientId"));
+        cognito.setUserPoolUrl(ini.getSectionProperty("main", "cognitoRealm.userPoolUrl"));
+        cognito.setUserPoolId(ini.getSectionProperty("main", "cognitoRealm.userPoolId"));
     }
 
     @Test
@@ -53,5 +59,11 @@ public class CognitoRealmTest {
     @Test
     public void testIfCognitoURLIsNotValid() {
         assertEquals(false, cognito.isCognitoUrlValid("saddfsdf"));
+    }
+
+    @Test
+    public void testCognitoConnection() {
+        cognito.setUserPoolId("wXe4T5v");
+        assertNotNull(cognito.getCognitoIdentityProvider());
     }
 }
