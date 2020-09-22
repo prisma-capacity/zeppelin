@@ -47,9 +47,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class CognitoRealm extends AuthorizingRealm {
   private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-  private String userPoolId;
-  private String userPoolUrl;
-  private String userPoolClientId;
+  private final String userPoolId;
+  private final String userPoolUrl;
+  private final String userPoolClientId;
   private String name;
   private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
   private final HttpClient httpClient;
@@ -64,6 +64,9 @@ public class CognitoRealm extends AuthorizingRealm {
       LOG.debug("Init CognitoRealm");
       httpClient = new HttpClient();
       name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
+      this.userPoolUrl="TODO";
+      this.userPoolClientId="TODO";
+      this.userPoolId="TODO";
   }
 
   @Override
@@ -90,16 +93,9 @@ public class CognitoRealm extends AuthorizingRealm {
     final Map<String, String> authParams = new HashMap<>();
     authParams.put("USERNAME", userName);
     authParams.put("PASSWORD", String.valueOf(password));
+    authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash(userPoolClientId, "TODO", userName));
 
       AdminInitiateAuthResult authResponse = this.initiateAuthRequest(authParams);
-//    final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
-//    authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
-//            .withClientId(userPoolClientId)
-//            .withUserPoolId(userPoolId)
-//            .withAuthParameters(authParams);
-
-    // AdminInitiateAuth
-//    AdminInitiateAuthResult authResponse = cognitoIdentityProvider.adminInitiateAuth(authRequest);
 
     // AdminRespondToAuthChallenge
     String challengeName = authResponse.getChallengeName();
@@ -112,6 +108,17 @@ public class CognitoRealm extends AuthorizingRealm {
         LOG.info("In else, not finished yet!");
     }
         return null;
+  }
+
+  private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
+    final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+    authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+            .withClientId(userPoolClientId)
+            .withUserPoolId(userPoolId)
+            .withAuthParameters(authParams);
+
+    // AdminInitiateAuth
+    return cognitoIdentityProvider.adminInitiateAuth(authRequest);
   }
 
   protected ListUsersResult getUserList(){
@@ -138,18 +145,6 @@ public class CognitoRealm extends AuthorizingRealm {
     } finally {
       return valid;
     }
-  }
-
-  private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
-      final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
-      authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
-              .withClientId(userPoolClientId)
-              .withUserPoolId(userPoolId)
-              .withAuthParameters(authParams);
-
-      // AdminInitiateAuth
-      AdminInitiateAuthResult authResponse = cognitoIdentityProvider.adminInitiateAuth(authRequest);
-      return authResponse;
   }
 
   /**
@@ -186,28 +181,12 @@ public class CognitoRealm extends AuthorizingRealm {
     return userPoolId;
   }
 
-  public void setUserPoolId(String userPoolId) {
-    this.userPoolId = userPoolId;
-  }
-
   public String getUserPoolUrl() {
     return userPoolUrl;
   }
 
-  public void setUserPoolUrl(String userPoolUrl) {
-    if (StringUtils.isNotBlank(userPoolUrl) && isCognitoUrlValid(userPoolUrl)) {
-      this.userPoolUrl = userPoolUrl;
-    } else {
-      LOG.error("The User Pool URL should not be empty");
-    }
-  }
-
   public String getUserPoolClientId() {
     return userPoolClientId;
-  }
-
-  public void setUserPoolClientId(String userPoolClientId) {
-    this.userPoolClientId = userPoolClientId;
   }
 
   public AWSCognitoIdentityProvider getCognitoIdentityProvider() {

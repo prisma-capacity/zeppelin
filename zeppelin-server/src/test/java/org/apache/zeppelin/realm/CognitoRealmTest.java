@@ -42,9 +42,9 @@ public class CognitoRealmTest {
         cognito = new CognitoRealm();
         IniRealm iniRealm = new IniRealm(resourcePath.getPath());
         Ini ini = iniRealm.getIni();
-        cognito.setUserPoolClientId(ini.getSectionProperty("main", "cognitoRealm.userPoolClientId"));
-        cognito.setUserPoolUrl(ini.getSectionProperty("main", "cognitoRealm.userPoolUrl"));
-        cognito.setUserPoolId(ini.getSectionProperty("main", "cognitoRealm.userPoolId"));
+//        cognito.setUserPoolClientId(ini.getSectionProperty("main", "cognitoRealm.userPoolClientId"));
+//        cognito.setUserPoolUrl(ini.getSectionProperty("main", "cognitoRealm.userPoolUrl"));
+//        cognito.setUserPoolId(ini.getSectionProperty("main", "cognitoRealm.userPoolId"));
     }
 
     @Test
@@ -66,7 +66,7 @@ public class CognitoRealmTest {
 
     @Test
     public void testCognitoConnection() {
-        cognito.setUserPoolId("wXe4T5v");
+//        cognito.setUserPoolId("wXe4T5v");
         assertNotNull(cognito.getCognitoIdentityProvider());
     }
 
@@ -75,11 +75,11 @@ public class CognitoRealmTest {
         Method method = CognitoRealm.class.getDeclaredMethod("initiateAuthRequest", Map.class);
         method.setAccessible(true);
         final Map<String, String> authParams = new HashMap<>();
-        authParams.put("USERNAME", "username");
-        authParams.put("PASSWORD", String.valueOf("password"));
-        cognito.setUserPoolId("userPoolId");
-        cognito.setUserPoolClientId("appclientid");
-        cognito.setUserPoolUrl("userpoolUrl");
+        String username = "TODO";
+        authParams.put("USERNAME", username);
+        authParams.put("PASSWORD", "TODO");
+        authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash
+                ("TODO", "TODO", username));
         System.out.println(method.invoke(cognito, authParams));
     }
 }
