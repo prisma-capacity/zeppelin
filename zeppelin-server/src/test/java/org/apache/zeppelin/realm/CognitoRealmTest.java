@@ -21,11 +21,14 @@ package org.apache.zeppelin.realm;
 import org.apache.shiro.config.Ini;
 import org.apache.shiro.realm.text.IniRealm;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
-import org.apache.zeppelin.service.ShiroAuthenticationService;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -65,5 +68,18 @@ public class CognitoRealmTest {
     public void testCognitoConnection() {
         cognito.setUserPoolId("wXe4T5v");
         assertNotNull(cognito.getCognitoIdentityProvider());
+    }
+
+    @Test
+    public void testInitiateAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException{
+        Method method = CognitoRealm.class.getDeclaredMethod("initiateAuthRequest", Map.class);
+        method.setAccessible(true);
+        final Map<String, String> authParams = new HashMap<>();
+        authParams.put("USERNAME", "username");
+        authParams.put("PASSWORD", String.valueOf("password"));
+        cognito.setUserPoolId("userPoolId");
+        cognito.setUserPoolClientId("appclientid");
+        cognito.setUserPoolUrl("userpoolUrl");
+        System.out.println(method.invoke(cognito, authParams));
     }
 }

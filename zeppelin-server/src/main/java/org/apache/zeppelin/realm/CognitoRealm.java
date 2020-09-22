@@ -20,9 +20,9 @@ package org.apache.zeppelin.realm;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
-import com.amazonaws.services.cognitoidp.model.ListUsersRequest;
-import com.amazonaws.services.cognitoidp.model.ListUsersResult;
 import com.google.gson.Gson;
+import com.amazonaws.services.cognitoidp.model.*;
+import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -38,18 +38,21 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.REGION;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@code Realm} implementation that uses the CognitoRealm to authenticate users.
- *
  */
 public class CognitoRealm extends AuthorizingRealm {
   private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
   private String userPoolId;
   private String userPoolUrl;
   private String userPoolClientId;
+  private String name;
+  private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+  private final HttpClient httpClient;
 
   private AWSCognitoIdentityProvider cognitoIdentityProvider = AWSCognitoIdentityProviderClientBuilder
           .standard()
@@ -57,7 +60,10 @@ public class CognitoRealm extends AuthorizingRealm {
           .build();
 
   public CognitoRealm() {
-    super();
+      super();
+      LOG.debug("Init CognitoRealm");
+      httpClient = new HttpClient();
+      name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
   }
 
   @Override
@@ -73,15 +79,39 @@ public class CognitoRealm extends AuthorizingRealm {
 
   @Override
   protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+    System.out.println("This is in the doGetAuthenticationInfo");
     UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
+    String userName = userInfo.getUsername();
+    char[] password = userInfo.getPassword();
     LOG.info("username: " + userInfo.getUsername());
     LOG.info("password: " + userInfo.getPassword());
 
-    ListUsersRequest request = new ListUsersRequest();
-    request.setUserPoolId(userPoolId);
+//        AuthenticationResultType authenticationResult = null;
+    final Map<String, String> authParams = new HashMap<>();
+    authParams.put("USERNAME", userName);
+    authParams.put("PASSWORD", String.valueOf(password));
 
-    LOG.info("User List: " + cognitoIdentityProvider.listUsers(request));
-    return null;
+      AdminInitiateAuthResult authResponse = this.initiateAuthRequest(authParams);
+//    final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+//    authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+//            .withClientId(userPoolClientId)
+//            .withUserPoolId(userPoolId)
+//            .withAuthParameters(authParams);
+
+    // AdminInitiateAuth
+//    AdminInitiateAuthResult authResponse = cognitoIdentityProvider.adminInitiateAuth(authRequest);
+
+    // AdminRespondToAuthChallenge
+    String challengeName = authResponse.getChallengeName();
+    if (StringUtils.isNotBlank(challengeName)) {
+        // TODO
+        if (ChallengeNameType.NEW_PASSWORD_REQUIRED.toString().equals(challengeName)) {
+            LOG.info("Decide what to do in this flow. NOT FINISHED!");
+        }
+    } else {
+        LOG.info("In else, not finished yet!");
+    }
+        return null;
   }
 
   protected ListUsersResult getUserList(){
@@ -108,6 +138,18 @@ public class CognitoRealm extends AuthorizingRealm {
     } finally {
       return valid;
     }
+  }
+
+  private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
+      final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+      authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+              .withClientId(userPoolClientId)
+              .withUserPoolId(userPoolId)
+              .withAuthParameters(authParams);
+
+      // AdminInitiateAuth
+      AdminInitiateAuthResult authResponse = cognitoIdentityProvider.adminInitiateAuth(authRequest);
+      return authResponse;
   }
 
   /**
