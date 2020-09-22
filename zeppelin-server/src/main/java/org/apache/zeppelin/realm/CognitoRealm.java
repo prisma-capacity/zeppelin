@@ -16,128 +16,132 @@
  */
 package org.apache.zeppelin.realm;
 
-import com.google.common.base.Joiner;
-import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.AnonymousAWSCredentials;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
+import com.amazonaws.services.cognitoidp.model.*;
 import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.PutMethod;
-import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.shiro.authc.*;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authz.AuthorizationInfo;
-import org.apache.shiro.config.Ini;
 import org.apache.shiro.realm.AuthorizingRealm;
-import org.apache.shiro.realm.text.IniRealm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.zeppelin.common.JsonSerializable;
-import org.apache.zeppelin.conf.ZeppelinConfiguration;
-import org.apache.zeppelin.notebook.repo.zeppelinhub.model.UserSessionContainer;
-import org.apache.zeppelin.notebook.repo.zeppelinhub.websocket.utils.ZeppelinhubUtils;
-import org.apache.zeppelin.service.ServiceContext;
-import org.apache.zeppelin.socket.NotebookServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@code Realm} implementation that uses the CognitoRealm to authenticate users.
- *
  */
 public class CognitoRealm extends AuthorizingRealm {
-  private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-  private static final String JSON_CONTENT_TYPE = "application/json";
-  private static final String UTF_8_ENCODING = "UTF-8";
-  private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
+    private static final String JSON_CONTENT_TYPE = "application/json";
+    private static final String UTF_8_ENCODING = "UTF-8";
+    private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+    private static final String USER_SESSION_HEADER = "X-session";
 
-  private final HttpClient httpClient;
-  private String userPoolId;
-  private String userPoolUrl;
-  private String userPoolClientId;
-  private String name;
-  private IniRealm iniRealm;
-  private Ini ini;
-  private final ZeppelinConfiguration conf;
+    private static final String USER_LOGIN_API_ENDPOINT = "api/v1/users/login";
+    private static final String DEFAULT_COGNITO_URL = "https://www.testing.com";
 
-  @Inject
-  public CognitoRealm(ZeppelinConfiguration conf){
-    super();
-    LOG.debug("Init CognitoRealm");
-    httpClient = new HttpClient();
-    name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
-    // String projectDir = System.getProperty("user.dir");
-    this.conf = conf;
-    this.iniRealm = new IniRealm(conf.getShiroPath());
-    this.ini = iniRealm.getIni();
-    this.userPoolClientId = ini.getSectionProperty("main", "cognitoRealm.userPoolClientId");
-    this.userPoolId = ini.getSectionProperty("main", "cognitoRealm.userPoolId");
-    this.userPoolUrl = ini.getSectionProperty("main", "cognitoRealm.userPoolUrl");
-  }
+    private final HttpClient httpClient;
 
-  protected void onInit() {
-    super.onInit();
-  }
+    private String userPoolId = "user-pool-id";
+    private String userPoolUrl = "user-pool-url";
+    private String region = "eu-central-1";
+    private String userPoolClientId = "user-pool-client-id";
+    private final AWSCognitoIdentityProvider cognito;
+    private String name;
 
-  @Override
-  protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
-    System.out.println("This is in the doGetAuthenticationInfo");
-    return null;
-  }
+    public CognitoRealm() {
+        super();
+        LOG.debug("Init CognitoRealm");
+        httpClient = new HttpClient();
+        name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
+        this.cognito = AWSCognitoIdentityProviderClientBuilder
+                .standard()
+                .withCredentials(new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()))
+                .withRegion(region)
+                .build();
+    }
 
-  @Override
-  protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-    return null;
-  }
+    protected void onInit() {
+        super.onInit();
+    }
 
-  /**
-   * Create a JSON String that represent login payload.
-   *
-   * Payload will look like:
-   * {@code
-   *  {
-   *   'login': 'userLogin',
-   *   'password': 'userpassword'
-   *  }
-   * }
-   * @param login
-   * @param pwd
-   * @return
-   */
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        System.out.println("This is in the doGetAuthenticationInfo");
+        UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
+        String userName = userInfo.getUsername();
+        char[] password = userInfo.getPassword();
+        LOG.info("username: " + userInfo.getUsername());
+        LOG.info("password: " + userInfo.getPassword());
+
+//        AuthenticationResultType authenticationResult = null;
+        final Map<String, String> authParams = new HashMap<>();
+        authParams.put("USERNAME", userName);
+        authParams.put("PASSWORD", String.valueOf(password));
+
+        final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+        authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+                .withClientId(userPoolClientId)
+                .withUserPoolId(userPoolId)
+                .withAuthParameters(authParams);
+
+        // AdminInitiateAuth
+        AdminInitiateAuthResult authResponse = cognito.adminInitiateAuth(authRequest);
+
+        // AdminRespondToAuthChallenge
+        String challengeName = authResponse.getChallengeName();
+        if (StringUtils.isNotBlank(challengeName)) {
+            // TODO
+            if (ChallengeNameType.NEW_PASSWORD_REQUIRED.toString().equals(challengeName)) {
+                LOG.info("Decide what to do in this flow. NOT FINISHED!");
+            }
+        } else {
+            LOG.info("In else, not finished yet!");
+        }
+        return null;
+    }
+
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+        System.out.println("This is in the doGetAuthorizationInfo");
+        return null;
+    }
+
+    /**
+     * Create a JSON String that represent login payload.
+     *
+     * Payload will look like:
+     * {@code
+     *  {
+     *   'login': 'userLogin',
+     *   'password': 'userpassword'
+     *  }
+     * }
+     * @param login
+     * @param pwd
+     * @return
+     */
 //  protected String createLoginPayload(String login, char[] pwd) {
 //    StringBuilder sb = new StringBuilder("{\"login\":\"");
 //    return sb.append(login).append("\", \"password\":\"").append(pwd).append("\"}").toString();
 //  }
 
-  /**
-   * Perform a Simple URL check by using {@code URI(url).toURL()}.
-   * If the url is not valid, the try-catch condition will catch the exceptions and return false,
-   * otherwise true will be returned.
-   *
-   * @param url
-   * @return
-   */
-  protected boolean isUserPoolUrlValid(String url) {
-    boolean valid;
-    try {
-      new URI(url).toURL();
-      valid = true;
-    } catch (URISyntaxException | MalformedURLException e) {
-      LOG.error("Cognito url is not valid.", e);
-      valid = false;
-    }
-    return valid;
-  }
-
-  /**
-   * Helper class that will be use to fromJson ZeppelinHub response.
-   */
+    /**
+     * Helper class that will be use to fromJson ZeppelinHub response.
+     */
 //  protected static class User implements JsonSerializable {
 //    private static final Gson gson = new Gson();
 //    public String login;
@@ -174,15 +178,53 @@ public class CognitoRealm extends AuthorizingRealm {
 //  public void onLogout(PrincipalCollection principals) {
 //    ZeppelinhubUtils.userLogoutRoutine((String) principals.getPrimaryPrincipal());
 //  }
+    public String getUserPoolClientId() {
+        return userPoolClientId;
+    }
 
-  public String getUserPoolClientId() {
-    return userPoolClientId;
-  }
-  public String getUserPoolUrl() {
-    return userPoolUrl;
-  }
-  public String getUserPoolId() {
-    return userPoolId;
-  }
+    public String getUserPoolUrl() {
+        return userPoolUrl;
+    }
 
+    public String getUserPoolId() {
+        return userPoolId;
+    }
+
+    /**
+     * Perform a Simple URL check by using {@code URI(url).toURL()}.
+     * If the url is not valid, the try-catch condition will catch the exceptions and return false,
+     * otherwise true will be returned.
+     *
+     * @param url
+     * @return
+     */
+    protected boolean isUserPoolUrlValid(String url) {
+        boolean valid;
+        try {
+            new URI(url).toURL();
+            valid = true;
+        } catch (URISyntaxException | MalformedURLException e) {
+            LOG.error("Cognito url is not valid.", e);
+            valid = false;
+        }
+        return valid;
+    }
+
+    public void setUserPoolId(String userPoolId) {
+        this.userPoolId = userPoolId;
+    }
+
+    public void setUserPoolUrl(String url) {
+        if (StringUtils.isBlank(url)) {
+            LOG.warn("Cognito url is empty, setting up default url {}", DEFAULT_COGNITO_URL);
+            userPoolUrl = DEFAULT_COGNITO_URL;
+        } else {
+            userPoolUrl = (isUserPoolUrlValid(url) ? url : DEFAULT_COGNITO_URL);
+            LOG.info("Setting up Cognito url to {}", userPoolUrl);
+        }
+    }
+
+    public void setUserPoolClientId(String userPoolClientId) {
+        this.userPoolClientId = userPoolClientId;
+    }
 }
