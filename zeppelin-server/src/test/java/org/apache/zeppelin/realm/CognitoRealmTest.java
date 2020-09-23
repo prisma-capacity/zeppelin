@@ -18,6 +18,7 @@
  */
 package org.apache.zeppelin.realm;
 
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -86,7 +87,7 @@ public class CognitoRealmTest {
 
         authParams.put("USERNAME", username);
         authParams.put("PASSWORD", password);
-        authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash
+        authParams.put("SECRET_HASH", SecretHashCalculator.calculate
                 (cognito.getUserPoolClientId(), cognito.getUserPoolClientSecret(), username));
         System.out.println(method.invoke(cognito, authParams));
 
@@ -95,10 +96,8 @@ public class CognitoRealmTest {
 
     @Test
     public void testRespondToChallengeAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException{
-        String username = "s.ilievska.10@gmail.com";
-
         UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
-        usernamePasswordToken.setPassword("TODO - longer or 16 chars".toCharArray());
+        usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
 
         CognitoRealm uut = new CognitoRealm();
