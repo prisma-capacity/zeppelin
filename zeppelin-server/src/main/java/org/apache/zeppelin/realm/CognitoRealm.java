@@ -47,9 +47,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class CognitoRealm extends AuthorizingRealm {
   private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-  private final String userPoolId;
-  private final String userPoolUrl;
-  private final String userPoolClientId;
+  private String userPoolId;
+  private String userPoolUrl;
+  private String userPoolClientId;
+  private String userPoolClientSecret;
   private String name;
   private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
   private final HttpClient httpClient;
@@ -64,9 +65,6 @@ public class CognitoRealm extends AuthorizingRealm {
       LOG.debug("Init CognitoRealm");
       httpClient = new HttpClient();
       name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
-      this.userPoolUrl="TODO";
-      this.userPoolClientId="TODO";
-      this.userPoolId="TODO";
   }
 
   @Override
@@ -191,5 +189,25 @@ public class CognitoRealm extends AuthorizingRealm {
 
   public AWSCognitoIdentityProvider getCognitoIdentityProvider() {
     return cognitoIdentityProvider;
+  }
+
+  public void setUserPoolId(String userPoolId) {
+    this.userPoolId = userPoolId;
+  }
+
+  public void setUserPoolUrl(String userPoolUrl) {
+    this.userPoolUrl = userPoolUrl;
+  }
+
+  public void setUserPoolClientId(String userPoolClientId) {
+    this.userPoolClientId = userPoolClientId;
+  }
+
+  public String getUserPoolClientSecret() {
+    return userPoolClientSecret;
+  }
+
+  public void setUserPoolClientSecret(String userPoolClientSecret) {
+    this.userPoolClientSecret = userPoolClientSecret;
   }
 }

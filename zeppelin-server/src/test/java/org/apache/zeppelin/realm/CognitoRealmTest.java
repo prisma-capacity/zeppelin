@@ -18,33 +18,42 @@
  */
 package org.apache.zeppelin.realm;
 
-import org.apache.shiro.config.Ini;
-import org.apache.shiro.realm.text.IniRealm;
-import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.Assert.*;
 
 public class CognitoRealmTest {
 
-    ZeppelinConfiguration zeppelinConfiguration;
     CognitoRealm cognito;
+    String username;
+    String password;
+
     @Before
     public void setup() throws Exception {
         URL resourcePath = this.getClass().getClassLoader().getResource("shiro.ini");
         cognito = new CognitoRealm();
-        IniRealm iniRealm = new IniRealm(resourcePath.getPath());
-        Ini ini = iniRealm.getIni();
-//        cognito.setUserPoolClientId(ini.getSectionProperty("main", "cognitoRealm.userPoolClientId"));
-//        cognito.setUserPoolUrl(ini.getSectionProperty("main", "cognitoRealm.userPoolUrl"));
-//        cognito.setUserPoolId(ini.getSectionProperty("main", "cognitoRealm.userPoolId"));
+        Properties props = getProperties();
+        username = props.getProperty("username");
+        password = props.getProperty("password");
+        String userPoolClientId = props.getProperty("userPoolClientId");
+        String userPoolClientSecret = props.getProperty("userPoolClientSecret");
+        String userPoolId = props.getProperty("userPoolId");
+        String userPoolUrl = props.getProperty("userPoolUrl");
+        cognito.setUserPoolClientId(userPoolClientId);
+        cognito.setUserPoolId(userPoolId);
+        cognito.setUserPoolUrl(userPoolUrl);
+        cognito.setUserPoolClientSecret(userPoolClientSecret);
     }
 
     @Test
@@ -66,20 +75,36 @@ public class CognitoRealmTest {
 
     @Test
     public void testCognitoConnection() {
-//        cognito.setUserPoolId("wXe4T5v");
         assertNotNull(cognito.getCognitoIdentityProvider());
     }
 
     @Test
-    public void testInitiateAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException{
+    public void testInitiateAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, IOException {
         Method method = CognitoRealm.class.getDeclaredMethod("initiateAuthRequest", Map.class);
         method.setAccessible(true);
         final Map<String, String> authParams = new HashMap<>();
-        String username = "TODO";
+
         authParams.put("USERNAME", username);
-        authParams.put("PASSWORD", "TODO");
+        authParams.put("PASSWORD", password);
         authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash
-                ("TODO", "TODO", username));
+                (cognito.getUserPoolClientId(), cognito.getUserPoolClientSecret(), username));
         System.out.println(method.invoke(cognito, authParams));
+    }
+
+    private Properties getProperties() throws IOException {
+        Properties prop = new Properties();
+        try {
+            String propFile = "aws.cognito.properties";
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propFile);
+            if (inputStream != null) {
+                prop.load(inputStream);
+            } else {
+                throw new FileNotFoundException("AWS Cognito properties '" + propFile + "' are not set or file cannot be found");
+            }
+        }catch (Exception e) {
+            System.out.println("Exception: " + e);
+        } finally {
+            return prop;
+        }
     }
 }

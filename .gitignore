@@ -129,3 +129,6 @@ tramp
 
 # Git properties
 **/git.properties
+
+# AWS properties
+**/aws.cognito.properties
