@@ -17,7 +17,6 @@
 package org.apache.zeppelin.realm;
 
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
 import com.google.gson.Gson;
@@ -54,7 +53,7 @@ public class CognitoRealm extends AuthorizingRealm {
   private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
   private final HttpClient httpClient;
 
-  private AWSCognitoIdentityProvider cognitoIdentityProvider = AWSCognitoIdentityProviderClientBuilder
+  private final AWSCognitoIdentityProvider cognitoIdentityProvider = AWSCognitoIdentityProviderClientBuilder
           .standard()
           .withRegion("eu-central-1")
           .build();
@@ -87,30 +86,65 @@ public class CognitoRealm extends AuthorizingRealm {
     String userName = userInfo.getUsername();
     char[] password = userInfo.getPassword();
     LOG.info("username: " + userInfo.getUsername());
-    LOG.info("password: " + userInfo.getPassword());
+    LOG.info("password: " + userInfo.getPassword().toString());
 
 //        AuthenticationResultType authenticationResult = null;
     final Map<String, String> authParams = new HashMap<>();
     authParams.put("USERNAME", userName);
     authParams.put("PASSWORD", String.valueOf(password));
-    authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash(userPoolClientId, "TODO", userName));
+    authParams.put("SECRET_HASH", calculateHash(userName));
 
       AdminInitiateAuthResult authResponse = this.initiateAuthRequest(authParams);
+      AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
+      System.out.println(authenticationResult.getAccessToken());
+      System.out.println(authenticationResult.getIdToken());
+      System.out.println(authenticationResult.getRefreshToken());
+      System.out.println("----------------------------");
 
     // AdminRespondToAuthChallenge
     String challengeName = authResponse.getChallengeName();
     if (StringUtils.isNotBlank(challengeName)) {
-        // TODO
-        if (ChallengeNameType.NEW_PASSWORD_REQUIRED.toString().equals(challengeName)) {
-            LOG.info("Decide what to do in this flow. NOT FINISHED!");
+        if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(challengeName)) {
+            LOG.info("In NEW_PASSWORD_REQUIRED Challenge!");
+            // client code should be present in zeppelin to handle new password request, new password needs to be passed to this method and passed as response
+            // to Cognito for the challenge
+
+            final Map<String, String> challengeResponses = new HashMap<>();
+            challengeResponses.put("USERNAME", userName);
+            challengeResponses.put("PASSWORD", String.valueOf(password));
+            challengeResponses.put("NEW_PASSWORD", "TODO-NEEDS TO BE MIN 16 chars!2#");
+            challengeResponses.put("SECRET_HASH", calculateHash(userName));
+
+            AdminRespondToAuthChallengeRequest respondToChallengeRequest = new AdminRespondToAuthChallengeRequest();
+
+          respondToChallengeRequest
+                  .withChallengeName(ChallengeNameType.NEW_PASSWORD_REQUIRED)
+                  .withChallengeResponses(challengeResponses)
+                  .withClientId(userPoolClientId)
+                  .withUserPoolId(userPoolId)
+                  .withSession(authResponse.getSession());
+
+            AdminRespondToAuthChallengeResult challengeResponse = cognitoIdentityProvider.adminRespondToAuthChallenge(respondToChallengeRequest);
+            System.out.println(challengeResponse);
+
+            AuthenticationResultType authResult = challengeResponse.getAuthenticationResult();
+            System.out.println(authResult);
+            System.out.println(authResult.getAccessToken());
+            System.out.println(authResult.getIdToken());
+            System.out.println(authResult.getRefreshToken());
+
         }
     } else {
-        LOG.info("In else, not finished yet!");
+        LOG.info("No challenge to respond to!");
     }
         return null;
   }
 
-  private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
+    private String calculateHash(String userName) {
+        return SecretHashCalculator.calculate(userPoolClientId, "TODO", userName);
+    }
+
+    private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
     final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
     authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
             .withClientId(userPoolClientId)
