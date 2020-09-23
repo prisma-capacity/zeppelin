@@ -89,6 +89,21 @@ public class CognitoRealmTest {
         authParams.put("SECRET_HASH", SecretHashCalculator.calculateSecretHash
                 (cognito.getUserPoolClientId(), cognito.getUserPoolClientSecret(), username));
         System.out.println(method.invoke(cognito, authParams));
+
+
+    }
+
+    @Test
+    public void testRespondToChallengeAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException{
+        String username = "s.ilievska.10@gmail.com";
+
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
+        usernamePasswordToken.setPassword("TODO - longer or 16 chars".toCharArray());
+        usernamePasswordToken.setUsername(username);
+
+        CognitoRealm uut = new CognitoRealm();
+
+        uut.doGetAuthenticationInfo(usernamePasswordToken);
     }
 
     private Properties getProperties() throws IOException {
