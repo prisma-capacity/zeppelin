@@ -18,6 +18,7 @@
  */
 package org.apache.zeppelin.realm;
 
+import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.junit.Before;
 import org.junit.Test;
@@ -89,20 +90,16 @@ public class CognitoRealmTest {
         authParams.put("PASSWORD", password);
         authParams.put("SECRET_HASH", SecretHashCalculator.calculate
                 (cognito.getUserPoolClientId(), cognito.getUserPoolClientSecret(), username));
-        System.out.println(method.invoke(cognito, authParams));
-
-
+        AdminInitiateAuthResult authResult = (AdminInitiateAuthResult) method.invoke(cognito, authParams);
+        assertNotNull(authResult.getAuthenticationResult().getAccessToken());
     }
 
     @Test
-    public void testRespondToChallengeAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException{
+    public void testRespondToChallengeAuthRequest() {
         UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
         usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
-
-        CognitoRealm uut = new CognitoRealm();
-
-        uut.doGetAuthenticationInfo(usernamePasswordToken);
+        cognito.doGetAuthenticationInfo(usernamePasswordToken);
     }
 
     private Properties getProperties() throws IOException {

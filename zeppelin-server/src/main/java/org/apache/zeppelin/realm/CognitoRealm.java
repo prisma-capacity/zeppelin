@@ -94,10 +94,10 @@ public class CognitoRealm extends AuthorizingRealm {
 
       AdminInitiateAuthResult authResponse = this.initiateAuthRequest(authParams);
       AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
-      System.out.println(authenticationResult.getAccessToken());
-      System.out.println(authenticationResult.getIdToken());
-      System.out.println(authenticationResult.getRefreshToken());
-      System.out.println("----------------------------");
+//      System.out.println(authenticationResult.getAccessToken());
+//      System.out.println(authenticationResult.getIdToken());
+//      System.out.println(authenticationResult.getRefreshToken());
+//      System.out.println("----------------------------");
 
     // AdminRespondToAuthChallenge
     String challengeName = authResponse.getChallengeName();
@@ -139,7 +139,7 @@ public class CognitoRealm extends AuthorizingRealm {
   }
 
     private String calculateHash(String userName) {
-        return SecretHashCalculator.calculate(userPoolClientId, "TODO", userName);
+        return SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, userName);
     }
 
     private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){

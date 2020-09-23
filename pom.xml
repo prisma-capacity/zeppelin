@@ -95,7 +95,7 @@
     <module>zeppelin-common</module>
     <module>zeppelin-client</module>
     <module>zeppelin-client-examples</module>
-<!--    <module>zeppelin-web</module>-->
+    <module>zeppelin-web</module>
     <module>zeppelin-interpreter-shaded</module>
     <module>zeppelin-server</module>
 <!--    <module>zeppelin-jupyter</module>-->
