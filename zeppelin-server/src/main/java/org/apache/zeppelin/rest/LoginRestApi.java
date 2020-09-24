@@ -212,15 +212,21 @@ public class LoginRestApi {
   @ZeppelinApi
   public Response postLogin(@FormParam("userName") String userName,
       @FormParam("password") String password) {
-    LOG.debug("userName: {}", userName);
+    LOG.info("postLogin/ start");
+    LOG.info("userName: {}", userName);
     // ticket set to anonymous for anonymous user. Simplify testing.
     Subject currentUser = SecurityUtils.getSubject();
     if (currentUser.isAuthenticated()) {
+      LOG.info("postLogin/ in already auth branch");
       currentUser.logout();
     }
-    LOG.debug("currentUser: {}", currentUser);
+    LOG.info("currentUser: {}", currentUser);
     JsonResponse<Map<String, String>> response = null;
     if (!currentUser.isAuthenticated()) {
+      LOG.info("postLogin/ in not auth branch");
+
+      LOG.info("postLogin/username: {}", userName);
+      LOG.info("postLogin/password: {}", password);
 
       UsernamePasswordToken token = new UsernamePasswordToken(userName, password);
 
@@ -228,6 +234,7 @@ public class LoginRestApi {
     }
 
     if (response == null) {
+      LOG.info("postLogin/ in response is null branch");
       response = new JsonResponse<>(Response.Status.FORBIDDEN, "", null);
     }
 

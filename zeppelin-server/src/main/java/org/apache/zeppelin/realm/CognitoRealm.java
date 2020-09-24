@@ -21,14 +21,14 @@ import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
 import com.google.gson.Gson;
 import com.amazonaws.services.cognitoidp.model.*;
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.shiro.authc.AuthenticationException;
-import org.apache.shiro.authc.AuthenticationInfo;
-import org.apache.shiro.authc.AuthenticationToken;
-import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
+import org.apache.shiro.realm.SimpleAccountRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.zeppelin.common.JsonSerializable;
 import org.slf4j.Logger;
@@ -40,89 +40,114 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * A {@code Realm} implementation that uses the CognitoRealm to authenticate users.
  */
 public class CognitoRealm extends AuthorizingRealm {
-  private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-  private String userPoolId;
-  private String userPoolUrl;
-  private String userPoolClientId;
-  private String userPoolClientSecret;
-  private String name;
-  private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
-  private final HttpClient httpClient;
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
+    private String userPoolId;
+    private String userPoolUrl;
+    private String userPoolClientId;
+    private String userPoolClientSecret;
+    private String name;
+    private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+    private final HttpClient httpClient;
+    private CognitoJwtVerifier cognitoJwtVerifier;
 
-  private final AWSCognitoIdentityProvider cognitoIdentityProvider = AWSCognitoIdentityProviderClientBuilder
-          .standard()
-          .withRegion("eu-central-1")
-          .build();
+    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) throws MalformedURLException {
+        LOG.info("setCognitoJwtVerifier: " + cognitoJwtVerifier.toString());
+        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
+        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
+        this.cognitoJwtVerifier = cognitoJwtVerifier;
+    }
 
-  public CognitoRealm() {
-      super();
-      LOG.debug("Init CognitoRealm");
-      httpClient = new HttpClient();
-      name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
-  }
+    private final AWSCognitoIdentityProvider cognito = AWSCognitoIdentityProviderClientBuilder
+            .standard()
+            .withRegion("eu-central-1")
+            .build();
 
-  @Override
-  public void onInit(){
-    super.onInit();
-    LOG.info("Try to call: " + userPoolUrl);
-  }
+    public CognitoRealm() throws MalformedURLException {
+        super();
+        LOG.info("Init CognitoRealm");
+        this.httpClient = new HttpClient();
+        this.name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
+    }
 
-  @Override
-  protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-    return null;
-  }
+    @Override
+    public void onInit() {
+        super.onInit();
+        LOG.info("onInit userPoolUrl: " + userPoolUrl);
+        LOG.info("onInit userPoolClientId: " + userPoolClientId);
+        LOG.info("onInit userPoolId: " + userPoolId);
+        LOG.info("onInit userPoolClientSecret: " + userPoolClientSecret);
+    }
 
-  @Override
-  protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
-    System.out.println("This is in the doGetAuthenticationInfo");
-    UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
-    String userName = userInfo.getUsername();
-    char[] password = userInfo.getPassword();
-    LOG.info("username: " + userInfo.getUsername());
-    LOG.info("password: " + userInfo.getPassword().toString());
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+        LOG.info("doGetAuthorizationInfo: " + principals.toString());
+        return new SimpleAuthorizationInfo();
+    }
 
-//        AuthenticationResultType authenticationResult = null;
-    final Map<String, String> authParams = new HashMap<>();
-    authParams.put("USERNAME", userName);
-    authParams.put("PASSWORD", String.valueOf(password));
-    authParams.put("SECRET_HASH", calculateHash(userName));
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        LOG.info("doGetAuthenticationInfo: " + token.toString());
 
-      AdminInitiateAuthResult authResponse = this.initiateAuthRequest(authParams);
-      AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
-//      System.out.println(authenticationResult.getAccessToken());
-//      System.out.println(authenticationResult.getIdToken());
-//      System.out.println(authenticationResult.getRefreshToken());
-//      System.out.println("----------------------------");
+        System.out.println("This is in the doGetAuthenticationInfo");
 
-    // AdminRespondToAuthChallenge
-    String challengeName = authResponse.getChallengeName();
-    if (StringUtils.isNotBlank(challengeName)) {
-        if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(challengeName)) {
+        UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
+        String username = userInfo.getUsername();
+        String password = String.valueOf(userInfo.getPassword());
+        // TODO Remove once done - we don't want to log the password ???
+        LOG.info("username: " + username);
+        LOG.info("password: " + password);
+
+        String hashedValue = calculateHash(username);
+
+        // AdminInitiateAuth
+        final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
+        AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
+
+        // AdminRespondToAuthChallenge
+        String challengeName = authResponse.getChallengeName();
+        boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
+
+        if (!isChallengePresent) {
+            // TODO Remove once done
+            LOG.info("No challenge to respond to!");
+
+            AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
+
+            // TODO Remove once done
+            String accessToken = authenticationResult.getAccessToken();
+            LOG.info("access token: " + accessToken);
+            LOG.info("id token: " + authenticationResult.getIdToken());
+            LOG.info("refresh token: " + authenticationResult.getRefreshToken());
+            LOG.info("----------------------------");
+
+            // TODO BUILD AN OBJECT TO RETURN TO SHIRO
+
+            // parse and verify the jwt token
+            try{
+                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
+                // build a SimpleAccount
+                SimpleAccount account = new SimpleAccount();
+                // most likely public SimpleAccount(PrincipalCollection principals, Object credentials, Set<String> roleNames, Set<Permission> permissions)
+            }catch(Exception ex){
+                LOG.info("Exception: " + ex.getMessage());
+            }
+        } else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(challengeName)) {
+            // TODO Remove once done
             LOG.info("In NEW_PASSWORD_REQUIRED Challenge!");
-            // client code should be present in zeppelin to handle new password request, new password needs to be passed to this method and passed as response
-            // to Cognito for the challenge
 
-            final Map<String, String> challengeResponses = new HashMap<>();
-            challengeResponses.put("USERNAME", userName);
-            challengeResponses.put("PASSWORD", String.valueOf(password));
-            challengeResponses.put("NEW_PASSWORD", "TODO-NEEDS TO BE MIN 16 chars!2#");
-            challengeResponses.put("SECRET_HASH", calculateHash(userName));
+            // TODO client code should be present in zeppelin to handle new password request, new password needs to be passed to this method and passed as response to Cognito for the challenge
 
-            AdminRespondToAuthChallengeRequest respondToChallengeRequest = new AdminRespondToAuthChallengeRequest();
+            final Map<String, String> challengeResponses = buildAuthRequest(username, password, hashedValue);
+             // TODO the new password should come from the client, once user fills out the new password form
+            challengeResponses.put("NEW_PASSWORD", "12345sa89A!@#11234abc9A%");
 
-          respondToChallengeRequest
-                  .withChallengeName(ChallengeNameType.NEW_PASSWORD_REQUIRED)
-                  .withChallengeResponses(challengeResponses)
-                  .withClientId(userPoolClientId)
-                  .withUserPoolId(userPoolId)
-                  .withSession(authResponse.getSession());
-
-            AdminRespondToAuthChallengeResult challengeResponse = cognitoIdentityProvider.adminRespondToAuthChallenge(respondToChallengeRequest);
+            AdminRespondToAuthChallengeResult challengeResponse = respondToAuthChallenge(authResponse, challengeResponses);
             System.out.println(challengeResponse);
 
             AuthenticationResultType authResult = challengeResponse.getAuthenticationResult();
@@ -130,118 +155,139 @@ public class CognitoRealm extends AuthorizingRealm {
             System.out.println(authResult.getAccessToken());
             System.out.println(authResult.getIdToken());
             System.out.println(authResult.getRefreshToken());
-
+        } else {
+            System.out.println("Challenge is not the one we expected!");
         }
-    } else {
-        LOG.info("No challenge to respond to!");
+
+        return new SimpleAuthenticationInfo(username, password, this.getName());
     }
+
+    private AdminRespondToAuthChallengeResult respondToAuthChallenge(AdminInitiateAuthResult authResponse, Map<String, String> challengeResponses) {
+        AdminRespondToAuthChallengeRequest respondToChallengeRequest = new AdminRespondToAuthChallengeRequest();
+
+        respondToChallengeRequest
+                .withChallengeName(ChallengeNameType.NEW_PASSWORD_REQUIRED)
+                .withChallengeResponses(challengeResponses)
+                .withClientId(userPoolClientId)
+                .withUserPoolId(userPoolId)
+                .withSession(authResponse.getSession());
+
+        // TODO Handle exceptions AWS may return
+        return cognito.adminRespondToAuthChallenge(respondToChallengeRequest);
+    }
+
+    private Map<String, String> buildAuthRequest(String username, String password, String hashedValue) {
+        final Map<String, String> authParams = new HashMap<>();
+        authParams.put("USERNAME", username);
+        authParams.put("PASSWORD", password);
+        authParams.put("SECRET_HASH", hashedValue);
+        return authParams;
+    }
+
+    private String calculateHash(String username) {
+        return SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, username);
+    }
+
+    private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams) {
+        final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+        authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+                .withClientId(userPoolClientId)
+                .withUserPoolId(userPoolId)
+                .withAuthParameters(authParams);
+
+        // TODO Handle exceptions AWS may return
+        return cognito.adminInitiateAuth(authRequest);
+    }
+
+    protected ListUsersResult getUserList() {
+        ListUsersRequest listUsersRequest = new ListUsersRequest();
+        listUsersRequest.setUserPoolId(userPoolId);
+        return cognito.listUsers(listUsersRequest);
+    }
+
+    /**
+     * Perform a Simple URL check by using {@code URI(url).toURL()}.
+     * If the url is not valid, the try-catch condition will catch the exceptions and return false,
+     * otherwise true will be returned.
+     *
+     * @param url
+     * @return
+     */
+    protected boolean isCognitoUrlValid(String url) {
+        boolean valid = false;
+        try {
+            new URI(url).toURL();
+            valid = true;
+        } catch (URISyntaxException | MalformedURLException e) {
+            LOG.error("Cognito url is not valid.", e);
+        } finally {
+            return valid;
+        }
+    }
+
+    /**
+     * Send to ZeppelinHub a login request based on the request body which is a JSON that contains 2
+     * fields "login" and "password".
+     *
+     * @param requestBody JSON string of ZeppelinHub payload.
+     * @return Account object with login, name (if set in ZeppelinHub), and mail.
+     * @throws AuthenticationException if fail to login.
+     */
+    protected User authenticateUser(String requestBody) {
         return null;
-  }
-
-    private String calculateHash(String userName) {
-        return SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, userName);
     }
 
-    private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams){
-    final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
-    authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
-            .withClientId(userPoolClientId)
-            .withUserPoolId(userPoolId)
-            .withAuthParameters(authParams);
+    /**
+     * Helper class that will be use to fromJson ZeppelinHub response.
+     */
+    protected static class User implements JsonSerializable {
+        private static final Gson gson = new Gson();
+        public String login;
+        public String email;
+        public String name;
 
-    // AdminInitiateAuth
-    return cognitoIdentityProvider.adminInitiateAuth(authRequest);
-  }
+        public String toJson() {
+            return gson.toJson(this);
+        }
 
-  protected ListUsersResult getUserList(){
-    ListUsersRequest listUsersRequest = new ListUsersRequest();
-    listUsersRequest.setUserPoolId(userPoolId);
-    return cognitoIdentityProvider.listUsers(listUsersRequest);
-  }
-
-  /**
-   * Perform a Simple URL check by using {@code URI(url).toURL()}.
-   * If the url is not valid, the try-catch condition will catch the exceptions and return false,
-   * otherwise true will be returned.
-   *
-   * @param url
-   * @return
-   */
-  protected boolean isCognitoUrlValid(String url) {
-    boolean valid = false;
-    try {
-      new URI(url).toURL();
-      valid = true;
-    } catch (URISyntaxException | MalformedURLException e) {
-      LOG.error("Cognito url is not valid.", e);
-    } finally {
-      return valid;
-    }
-  }
-
-  /**
-   * Send to ZeppelinHub a login request based on the request body which is a JSON that contains 2
-   * fields "login" and "password".
-   *
-   * @param requestBody JSON string of ZeppelinHub payload.
-   * @return Account object with login, name (if set in ZeppelinHub), and mail.
-   * @throws AuthenticationException if fail to login.
-   */
-  protected User authenticateUser(String requestBody) {
-    return null;
-  }
-
-  /**
-   * Helper class that will be use to fromJson ZeppelinHub response.
-   */
-  protected static class User implements JsonSerializable {
-    private static final Gson gson = new Gson();
-    public String login;
-    public String email;
-    public String name;
-
-    public String toJson() {
-      return gson.toJson(this);
+        public static ZeppelinHubRealm.User fromJson(String json) {
+            return gson.fromJson(json, ZeppelinHubRealm.User.class);
+        }
     }
 
-    public static ZeppelinHubRealm.User fromJson(String json) {
-      return gson.fromJson(json, ZeppelinHubRealm.User.class);
+    public String getUserPoolId() {
+        return userPoolId;
     }
-  }
 
-  public String getUserPoolId() {
-    return userPoolId;
-  }
+    public void setUserPoolId(String userPoolId) {
+        this.userPoolId = userPoolId;
+    }
 
-  public String getUserPoolUrl() {
-    return userPoolUrl;
-  }
+    public String getUserPoolUrl() {
+        return userPoolUrl;
+    }
 
-  public String getUserPoolClientId() {
-    return userPoolClientId;
-  }
+    public void setUserPoolUrl(String userPoolUrl) {
+        this.userPoolUrl = userPoolUrl;
+    }
 
-  public AWSCognitoIdentityProvider getCognitoIdentityProvider() {
-    return cognitoIdentityProvider;
-  }
+    public String getUserPoolClientId() {
+        return userPoolClientId;
+    }
 
-  public void setUserPoolId(String userPoolId) {
-    this.userPoolId = userPoolId;
-  }
+    public void setUserPoolClientId(String userPoolClientId) {
+        this.userPoolClientId = userPoolClientId;
+    }
 
-  public void setUserPoolUrl(String userPoolUrl) {
-    this.userPoolUrl = userPoolUrl;
-  }
+    public String getUserPoolClientSecret() {
+        return userPoolClientSecret;
+    }
 
-  public void setUserPoolClientId(String userPoolClientId) {
-    this.userPoolClientId = userPoolClientId;
-  }
+    public void setUserPoolClientSecret(String userPoolClientSecret) {
+        this.userPoolClientSecret = userPoolClientSecret;
+    }
 
-  public String getUserPoolClientSecret() {
-    return userPoolClientSecret;
-  }
-
-  public void setUserPoolClientSecret(String userPoolClientSecret) {
-    this.userPoolClientSecret = userPoolClientSecret;
-  }
+    public AWSCognitoIdentityProvider getCognito() {
+        return cognito;
+    }
 }

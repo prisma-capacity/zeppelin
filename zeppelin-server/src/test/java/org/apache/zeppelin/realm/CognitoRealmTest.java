@@ -77,7 +77,7 @@ public class CognitoRealmTest {
 
     @Test
     public void testCognitoConnection() {
-        assertNotNull(cognito.getCognitoIdentityProvider());
+        assertNotNull(cognito.getCognito());
     }
 
     @Test
