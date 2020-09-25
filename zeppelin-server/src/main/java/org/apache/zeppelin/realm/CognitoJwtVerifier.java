@@ -40,7 +40,6 @@ public class CognitoJwtVerifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
 
-    private JWKSource jwkSource;
     private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
 
@@ -50,7 +49,7 @@ public class CognitoJwtVerifier {
     }
 
     public JWTClaimsSet verifyJwt(String token) throws ParseException, JOSEException, BadJOSEException, MalformedURLException {
-        jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + ".well-known/jwks.json"));
+        JWKSource jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + "/.well-known/jwks.json"));
 
         DefaultJWTProcessor jwtProcessor = new DefaultJWTProcessor<>();
         JWSAlgorithmFamilyJWSKeySelector keySelector = new JWSAlgorithmFamilyJWSKeySelector<>(JWSAlgorithm.Family.RSA, jwkSource);

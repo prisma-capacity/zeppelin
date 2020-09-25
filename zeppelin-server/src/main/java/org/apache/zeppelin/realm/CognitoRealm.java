@@ -30,6 +30,7 @@ import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.realm.SimpleAccountRealm;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.SimplePrincipalMap;
 import org.apache.zeppelin.common.JsonSerializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,9 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -53,7 +56,6 @@ public class CognitoRealm extends AuthorizingRealm {
     private String userPoolClientSecret;
     private String name;
     private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
-    private final HttpClient httpClient;
     private CognitoJwtVerifier cognitoJwtVerifier;
 
     public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) throws MalformedURLException {
@@ -71,7 +73,6 @@ public class CognitoRealm extends AuthorizingRealm {
     public CognitoRealm() throws MalformedURLException {
         super();
         LOG.info("Init CognitoRealm");
-        this.httpClient = new HttpClient();
         this.name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
     }
 
@@ -93,9 +94,6 @@ public class CognitoRealm extends AuthorizingRealm {
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
         LOG.info("doGetAuthenticationInfo: " + token.toString());
-
-        System.out.println("This is in the doGetAuthenticationInfo");
-
         UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
         String username = userInfo.getUsername();
         String password = String.valueOf(userInfo.getPassword());
@@ -103,13 +101,19 @@ public class CognitoRealm extends AuthorizingRealm {
         LOG.info("username: " + username);
         LOG.info("password: " + password);
 
-        String hashedValue = calculateHash(username);
+        SimpleAuthenticationInfo authenticationInfo = null;
 
+        String hashedValue = null;
+
+        try {
+            hashedValue = SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, username);
+        } catch (Exception e) {
+            LOG.info("Exception in calculating hash: " + e.getMessage());
+        }
         // AdminInitiateAuth
         final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
         AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
 
-        // AdminRespondToAuthChallenge
         String challengeName = authResponse.getChallengeName();
         boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
 
@@ -117,49 +121,39 @@ public class CognitoRealm extends AuthorizingRealm {
             // TODO Remove once done
             LOG.info("No challenge to respond to!");
 
-            AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
+            AuthenticationResultType authResult = authResponse.getAuthenticationResult();
 
-            // TODO Remove once done
-            String accessToken = authenticationResult.getAccessToken();
-            LOG.info("access token: " + accessToken);
-            LOG.info("id token: " + authenticationResult.getIdToken());
-            LOG.info("refresh token: " + authenticationResult.getRefreshToken());
-            LOG.info("----------------------------");
+            LOG.info("ACCESS TOKEN is: " + authResult.getAccessToken());
 
-            // TODO BUILD AN OBJECT TO RETURN TO SHIRO
-
-            // parse and verify the jwt token
-            try{
-                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
-                // build a SimpleAccount
-                SimpleAccount account = new SimpleAccount();
-                // most likely public SimpleAccount(PrincipalCollection principals, Object credentials, Set<String> roleNames, Set<Permission> permissions)
-            }catch(Exception ex){
-                LOG.info("Exception: " + ex.getMessage());
-            }
+            authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
         } else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(challengeName)) {
             // TODO Remove once done
             LOG.info("In NEW_PASSWORD_REQUIRED Challenge!");
 
-            // TODO client code should be present in zeppelin to handle new password request, new password needs to be passed to this method and passed as response to Cognito for the challenge
-
             final Map<String, String> challengeResponses = buildAuthRequest(username, password, hashedValue);
-             // TODO the new password should come from the client, once user fills out the new password form
-            challengeResponses.put("NEW_PASSWORD", "12345sa89A!@#11234abc9A%");
+            // TODO the new password should come from the client, once user fills out the new password form
+            challengeResponses.put("NEW_PASSWORD", "NewPasswordNewPassword!123#");
 
             AdminRespondToAuthChallengeResult challengeResponse = respondToAuthChallenge(authResponse, challengeResponses);
-            System.out.println(challengeResponse);
-
             AuthenticationResultType authResult = challengeResponse.getAuthenticationResult();
-            System.out.println(authResult);
-            System.out.println(authResult.getAccessToken());
-            System.out.println(authResult.getIdToken());
-            System.out.println(authResult.getRefreshToken());
+            authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
         } else {
-            System.out.println("Challenge is not the one we expected!");
+            LOG.info("Cognito Challenge is not the one that is expected.");
         }
+        return authenticationInfo;
+    }
 
-        return new SimpleAuthenticationInfo(username, password, this.getName());
+    private SimpleAuthenticationInfo buildCognitoAuthenticationInfo(String password, String idToken) {
+        SimpleAuthenticationInfo authenticationInfo = null;
+        try {
+            JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
+            LOG.info("id token claims: " + idTokenClaims.getClaims());
+            LOG.info("Getting claim for email: " + idTokenClaims.getClaim("email"));
+            authenticationInfo = new SimpleAuthenticationInfo(idTokenClaims.getClaim("email"), password, this.getName());
+        } catch (Exception e) {
+            LOG.info("Exception in normal auth: " + e.getMessage());
+        }
+        return authenticationInfo;
     }
 
     private AdminRespondToAuthChallengeResult respondToAuthChallenge(AdminInitiateAuthResult authResponse, Map<String, String> challengeResponses) {
@@ -184,10 +178,6 @@ public class CognitoRealm extends AuthorizingRealm {
         return authParams;
     }
 
-    private String calculateHash(String username) {
-        return SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, username);
-    }
-
     private AdminInitiateAuthResult initiateAuthRequest(Map<String, String> authParams) {
         final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
         authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
@@ -199,11 +189,6 @@ public class CognitoRealm extends AuthorizingRealm {
         return cognito.adminInitiateAuth(authRequest);
     }
 
-    protected ListUsersResult getUserList() {
-        ListUsersRequest listUsersRequest = new ListUsersRequest();
-        listUsersRequest.setUserPoolId(userPoolId);
-        return cognito.listUsers(listUsersRequest);
-    }
 
     /**
      * Perform a Simple URL check by using {@code URI(url).toURL()}.
@@ -222,36 +207,6 @@ public class CognitoRealm extends AuthorizingRealm {
             LOG.error("Cognito url is not valid.", e);
         } finally {
             return valid;
-        }
-    }
-
-    /**
-     * Send to ZeppelinHub a login request based on the request body which is a JSON that contains 2
-     * fields "login" and "password".
-     *
-     * @param requestBody JSON string of ZeppelinHub payload.
-     * @return Account object with login, name (if set in ZeppelinHub), and mail.
-     * @throws AuthenticationException if fail to login.
-     */
-    protected User authenticateUser(String requestBody) {
-        return null;
-    }
-
-    /**
-     * Helper class that will be use to fromJson ZeppelinHub response.
-     */
-    protected static class User implements JsonSerializable {
-        private static final Gson gson = new Gson();
-        public String login;
-        public String email;
-        public String name;
-
-        public String toJson() {
-            return gson.toJson(this);
-        }
-
-        public static ZeppelinHubRealm.User fromJson(String json) {
-            return gson.fromJson(json, ZeppelinHubRealm.User.class);
         }
     }
 
