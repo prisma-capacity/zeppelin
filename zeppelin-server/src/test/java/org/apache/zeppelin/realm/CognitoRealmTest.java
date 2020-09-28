@@ -23,11 +23,13 @@ import org.apache.shiro.authc.UsernamePasswordToken;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,27 +44,25 @@ public class CognitoRealmTest {
     String password;
 
     @Before
-    public void setup() throws Exception {
-        URL resourcePath = this.getClass().getClassLoader().getResource("shiro.ini");
-        cognito = new CognitoRealm();
-        Properties props = getProperties();
-        username = props.getProperty("username");
-        password = props.getProperty("password");
-        String userPoolClientId = props.getProperty("userPoolClientId");
-        String userPoolClientSecret = props.getProperty("userPoolClientSecret");
-        String userPoolId = props.getProperty("userPoolId");
-        String userPoolUrl = props.getProperty("userPoolUrl");
-        cognito.setUserPoolClientId(userPoolClientId);
-        cognito.setUserPoolId(userPoolId);
-        cognito.setUserPoolUrl(userPoolUrl);
-        cognito.setUserPoolClientSecret(userPoolClientSecret);
-    }
-
-    @Test
-    public void testGetIniInformation() {
-        assertEquals("123456789", cognito.getUserPoolClientId());
-        assertEquals("12345678", cognito.getUserPoolId());
-        assertEquals("https://test.com", cognito.getUserPoolUrl());
+    public void setup() throws IOException, URISyntaxException {
+        URL resourcePath = this.getClass().getClassLoader().getResource("aws.cognito.properties");
+        File file = new File(resourcePath.toURI());
+        if(file.exists() != false){
+            cognito = new CognitoRealm();
+            Properties props = getProperties();
+            username = props.getProperty("username");
+            password = props.getProperty("password");
+            String userPoolClientId = props.getProperty("userPoolClientId");
+            String userPoolClientSecret = props.getProperty("userPoolClientSecret");
+            String userPoolId = props.getProperty("userPoolId");
+            String userPoolUrl = props.getProperty("userPoolUrl");
+            cognito.setUserPoolClientId(userPoolClientId);
+            cognito.setUserPoolId(userPoolId);
+            cognito.setUserPoolUrl(userPoolUrl);
+            cognito.setUserPoolClientSecret(userPoolClientSecret);
+        }else {
+            System.out.println("You need to set the aws.cognito.properties in order to test. Take the .template and adjust it");
+        }
     }
 
     @Test
@@ -94,13 +94,13 @@ public class CognitoRealmTest {
         assertNotNull(authResult.getAuthenticationResult().getAccessToken());
     }
 
-    @Test
-    public void testRespondToChallengeAuthRequest() {
-        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
-        usernamePasswordToken.setPassword(password.toCharArray());
-        usernamePasswordToken.setUsername(username);
-        cognito.doGetAuthenticationInfo(usernamePasswordToken);
-    }
+//    @Test
+//    public void testRespondToChallengeAuthRequest() {
+//        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
+//        usernamePasswordToken.setPassword(password.toCharArray());
+//        usernamePasswordToken.setUsername(username);
+//        cognito.doGetAuthenticationInfo(usernamePasswordToken);
+//    }
 
     private Properties getProperties() throws IOException {
         Properties prop = new Properties();

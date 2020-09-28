@@ -91,75 +91,53 @@ public class CognitoRealm extends AuthorizingRealm {
     }
 
     @Override
-    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+    public AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
         LOG.info("doGetAuthenticationInfo: " + token.toString());
 
         System.out.println("This is in the doGetAuthenticationInfo");
+        if(token instanceof UsernamePasswordToken){
+            UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
+            String username = userInfo.getUsername();
 
-        UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
-        String username = userInfo.getUsername();
-        String password = String.valueOf(userInfo.getPassword());
-        // TODO Remove once done - we don't want to log the password ???
-        LOG.info("username: " + username);
-        LOG.info("password: " + password);
+            String password = String.valueOf(userInfo.getPassword());
+            String hashedValue = calculateHash(username);
 
-        String hashedValue = calculateHash(username);
+            // AdminInitiateAuth
+            final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
+            AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
 
-        // AdminInitiateAuth
-        final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
-        AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
+            // AdminRespondToAuthChallenge
+            String challengeName = authResponse.getChallengeName();
+            boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
 
-        // AdminRespondToAuthChallenge
-        String challengeName = authResponse.getChallengeName();
-        boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
+            if (!isChallengePresent) {
 
-        if (!isChallengePresent) {
-            // TODO Remove once done
-            LOG.info("No challenge to respond to!");
+                AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
 
-            AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
+                String accessToken = authenticationResult.getAccessToken();
 
-            // TODO Remove once done
-            String accessToken = authenticationResult.getAccessToken();
-            LOG.info("access token: " + accessToken);
-            LOG.info("id token: " + authenticationResult.getIdToken());
-            LOG.info("refresh token: " + authenticationResult.getRefreshToken());
-            LOG.info("----------------------------");
-
-            // TODO BUILD AN OBJECT TO RETURN TO SHIRO
-
-            // parse and verify the jwt token
+                // parse and verify the jwt token
+                try{
+                    JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
+                }catch(Exception ex){
+                    LOG.info("Exception: " + ex.getMessage());
+                }
+            }
+            return new SimpleAuthenticationInfo(username, password, this.getName());
+        } else if(token instanceof CognitoToken) {
+            CognitoToken cognitoToken = (CognitoToken) token;
+            LOG.info("Should have a Cognito Token" + cognitoToken);
+            String username = "";
             try{
-                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
-                // build a SimpleAccount
-                SimpleAccount account = new SimpleAccount();
-                // most likely public SimpleAccount(PrincipalCollection principals, Object credentials, Set<String> roleNames, Set<Permission> permissions)
+                cognitoJwtVerifier.setCognitoUserPoolId(userPoolId);
+                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(cognitoToken.id_token);
+                username = claims.getStringClaim("cognito:username");
             }catch(Exception ex){
                 LOG.info("Exception: " + ex.getMessage());
             }
-        } else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(challengeName)) {
-            // TODO Remove once done
-            LOG.info("In NEW_PASSWORD_REQUIRED Challenge!");
-
-            // TODO client code should be present in zeppelin to handle new password request, new password needs to be passed to this method and passed as response to Cognito for the challenge
-
-            final Map<String, String> challengeResponses = buildAuthRequest(username, password, hashedValue);
-             // TODO the new password should come from the client, once user fills out the new password form
-            challengeResponses.put("NEW_PASSWORD", "12345sa89A!@#11234abc9A%");
-
-            AdminRespondToAuthChallengeResult challengeResponse = respondToAuthChallenge(authResponse, challengeResponses);
-            System.out.println(challengeResponse);
-
-            AuthenticationResultType authResult = challengeResponse.getAuthenticationResult();
-            System.out.println(authResult);
-            System.out.println(authResult.getAccessToken());
-            System.out.println(authResult.getIdToken());
-            System.out.println(authResult.getRefreshToken());
-        } else {
-            System.out.println("Challenge is not the one we expected!");
+            return new SimpleAuthenticationInfo(username, cognitoToken.id_token, this.getName());
         }
-
-        return new SimpleAuthenticationInfo(username, password, this.getName());
+        return null;
     }
 
     private AdminRespondToAuthChallengeResult respondToAuthChallenge(AdminInitiateAuthResult authResponse, Map<String, String> challengeResponses) {
@@ -222,36 +200,6 @@ public class CognitoRealm extends AuthorizingRealm {
             LOG.error("Cognito url is not valid.", e);
         } finally {
             return valid;
-        }
-    }
-
-    /**
-     * Send to ZeppelinHub a login request based on the request body which is a JSON that contains 2
-     * fields "login" and "password".
-     *
-     * @param requestBody JSON string of ZeppelinHub payload.
-     * @return Account object with login, name (if set in ZeppelinHub), and mail.
-     * @throws AuthenticationException if fail to login.
-     */
-    protected User authenticateUser(String requestBody) {
-        return null;
-    }
-
-    /**
-     * Helper class that will be use to fromJson ZeppelinHub response.
-     */
-    protected static class User implements JsonSerializable {
-        private static final Gson gson = new Gson();
-        public String login;
-        public String email;
-        public String name;
-
-        public String toJson() {
-            return gson.toJson(this);
-        }
-
-        public static ZeppelinHubRealm.User fromJson(String json) {
-            return gson.fromJson(json, ZeppelinHubRealm.User.class);
         }
     }
 
