@@ -308,7 +308,7 @@ public class LoginRestApi {
       LOG.info("postLogin/ in already auth branch");
       currentUser.logout();
     }
-    LOG.info("currentUser: {}", currentUser);
+    LOG.info("currentUser: {}", currentUser.getPrincipal());
     JsonResponse<Map<String, String>> response = null;
     if (!currentUser.isAuthenticated()) {
       LOG.info("postLogin/ in not auth branch");

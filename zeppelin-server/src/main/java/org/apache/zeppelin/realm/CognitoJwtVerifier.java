@@ -68,7 +68,6 @@ public class CognitoJwtVerifier {
         this.cognitoUserPoolUrl = cognitoUserPoolUrl;
     }
 
-
     public void setCognitoUserPoolId(String cognitoUserPoolId) {
         this.cognitoUserPoolId = cognitoUserPoolId;
     }

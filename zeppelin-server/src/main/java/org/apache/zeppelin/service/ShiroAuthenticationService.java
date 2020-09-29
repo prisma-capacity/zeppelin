@@ -139,6 +139,9 @@ public class ShiroAuthenticationService implements AuthenticationService {
   /** Checked if shiro enabled or not. */
   @Override
   public boolean isAuthenticated() {
+
+    LOGGER.info("In ShiroAuthenticationService");
+
     return org.apache.shiro.SecurityUtils.getSubject().isAuthenticated();
   }
 
