@@ -38,23 +38,17 @@ import java.util.HashSet;
 
 public class CognitoJwtVerifier {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-
-    private JWKSource jwkSource;
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
 
     private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
-
     private String cognitoUserPoolId;
-
-    public CognitoJwtVerifier() throws MalformedURLException {
+    public CognitoJwtVerifier() {
         LOG.info("Init CognitoJwtVerifier");
-        //cognitoUserPoolUrl + "/.well-known/jwks.json"));
     }
 
     public JWTClaimsSet verifyJwt(String token) throws ParseException, JOSEException, BadJOSEException, MalformedURLException {
-        jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + "/" + cognitoUserPoolId + "/.well-known/jwks.json"));
-
+        JWKSource jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + "/" + cognitoUserPoolId + "/.well-known/jwks.json"));
         DefaultJWTProcessor jwtProcessor = new DefaultJWTProcessor<>();
         JWSAlgorithmFamilyJWSKeySelector keySelector = new JWSAlgorithmFamilyJWSKeySelector<>(JWSAlgorithm.Family.RSA, jwkSource);
 
@@ -66,24 +60,24 @@ public class CognitoJwtVerifier {
                         .claim("token_use", "id")
                         .build(),
                 new HashSet<>(Arrays.asList("sub", "iat", "exp", "cognito:username"))));
-        LOG.info("Build Claimsset");
+
         return jwtProcessor.process(token, null);
     }
 
     public void setCognitoUserPoolUrl(String cognitoUserPoolUrl) {
-        this.cognitoUserPoolUrl = "https://cognito-idp.eu-central-1.amazonaws.com";
+        this.cognitoUserPoolUrl = cognitoUserPoolUrl;
+    }
+
+
+    public void setCognitoUserPoolId(String cognitoUserPoolId) {
+        this.cognitoUserPoolId = cognitoUserPoolId;
     }
 
     public void setCognitoUserPoolClientId(String cognitoUserPoolClientId) {
-        LOG.info("cognitoUserPoolClientId: " + cognitoUserPoolClientId);
         this.cognitoUserPoolClientId = cognitoUserPoolClientId;
     }
 
     public String getCognitoUserPoolUrl() {
         return cognitoUserPoolUrl;
-    }
-
-    public void setCognitoUserPoolId(String cognitoUserPoolId) {
-        this.cognitoUserPoolId = cognitoUserPoolId;
     }
 }
