@@ -19,7 +19,6 @@ package org.apache.zeppelin.realm;
 
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
-import com.google.gson.Gson;
 import com.amazonaws.services.cognitoidp.model.*;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.httpclient.HttpClient;
@@ -28,9 +27,7 @@ import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
-import org.apache.shiro.realm.SimpleAccountRealm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.zeppelin.common.JsonSerializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +65,7 @@ public class CognitoRealm extends AuthorizingRealm {
             .withRegion("eu-central-1")
             .build();
 
-    public CognitoRealm() throws MalformedURLException {
+    public CognitoRealm() {
         super();
         LOG.info("Init CognitoRealm");
         this.httpClient = new HttpClient();
@@ -86,58 +83,38 @@ public class CognitoRealm extends AuthorizingRealm {
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        LOG.info("doGetAuthorizationInfo: " + principals.toString());
         return new SimpleAuthorizationInfo();
     }
 
     @Override
     public AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
-        LOG.info("doGetAuthenticationInfo: " + token.toString());
+        UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
+        String username = userInfo.getUsername();
 
-        System.out.println("This is in the doGetAuthenticationInfo");
-        if(token instanceof UsernamePasswordToken){
-            UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
-            String username = userInfo.getUsername();
+        String password = String.valueOf(userInfo.getPassword());
+        String hashedValue = calculateHash(username);
 
-            String password = String.valueOf(userInfo.getPassword());
-            String hashedValue = calculateHash(username);
+        // AdminInitiateAuth
+        final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
+        AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
 
-            // AdminInitiateAuth
-            final Map<String, String> authParams = buildAuthRequest(username, password, hashedValue);
-            AdminInitiateAuthResult authResponse = initiateAuthRequest(authParams);
+        // AdminRespondToAuthChallenge
+        String challengeName = authResponse.getChallengeName();
+        boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
 
-            // AdminRespondToAuthChallenge
-            String challengeName = authResponse.getChallengeName();
-            boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
-
-            if (!isChallengePresent) {
-
-                AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
-
-                String accessToken = authenticationResult.getAccessToken();
-
-                // parse and verify the jwt token
-                try{
-                    JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
-                }catch(Exception ex){
-                    LOG.info("Exception: " + ex.getMessage());
-                }
-            }
-            return new SimpleAuthenticationInfo(username, password, this.getName());
-        } else if(token instanceof CognitoToken) {
-            CognitoToken cognitoToken = (CognitoToken) token;
-            LOG.info("Should have a Cognito Token" + cognitoToken);
-            String username = "";
+        if (!isChallengePresent) {
+            AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
+            String accessToken = authenticationResult.getAccessToken();
+            // parse and verify the jwt token
             try{
-                cognitoJwtVerifier.setCognitoUserPoolId(userPoolId);
-                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(cognitoToken.id_token);
-                username = claims.getStringClaim("cognito:username");
+                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
+                // most likely public SimpleAccount(PrincipalCollection principals, Object credentials, Set<String> roleNames, Set<Permission> permissions)
             }catch(Exception ex){
                 LOG.info("Exception: " + ex.getMessage());
             }
-            return new SimpleAuthenticationInfo(username, cognitoToken.id_token, this.getName());
         }
-        return null;
+
+        return new SimpleAuthenticationInfo(username, password, this.getName());
     }
 
     private AdminRespondToAuthChallengeResult respondToAuthChallenge(AdminInitiateAuthResult authResponse, Map<String, String> challengeResponses) {

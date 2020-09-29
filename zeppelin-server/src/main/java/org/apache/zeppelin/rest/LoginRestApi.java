@@ -94,55 +94,54 @@ public class LoginRestApi {
   @GET
   @ZeppelinApi
   public Response getLogin(@Context HttpHeaders headers, @QueryParam("code") String code) {
-//    JsonResponse<Map<String, String>> response = null;
-//    if (isKnoxSSOEnabled()) {
-//      KnoxJwtRealm knoxJwtRealm = getJTWRealm();
-//      Cookie cookie = headers.getCookies().get(knoxJwtRealm.getCookieName());
-//      if (cookie != null && cookie.getValue() != null) {
-//        Subject currentUser = SecurityUtils.getSubject();
-//        JWTAuthenticationToken token = new JWTAuthenticationToken(null, cookie.getValue());
-//        try {
-//          String name = knoxJwtRealm.getName(token);
-//          if (!currentUser.isAuthenticated() || !currentUser.getPrincipal().equals(name)) {
-//            response = proceedToLogin(currentUser, token);
-//          }
-//        } catch (ParseException e) {
-//          LOG.error("ParseException in LoginRestApi: ", e);
-//        }
-//      }
-//      if (response == null) {
-//        Map<String, String> data = new HashMap<>();
-//        data.put("redirectURL", constructKnoxUrl(knoxJwtRealm, knoxJwtRealm.getLogin()));
-//        response = new JsonResponse<>(Status.OK, "", data);
-//      }
-//      return response.build();
-//    }
-//
-//    KerberosRealm kerberosRealm = getKerberosRealm();
-//    if (null != kerberosRealm) {
-//      try {
-//        Map<String, Cookie> cookies = headers.getCookies();
-//        KerberosToken kerberosToken = KerberosRealm.getKerberosTokenFromCookies(cookies);
-//        if (null != kerberosToken) {
-//          Subject currentUser = SecurityUtils.getSubject();
-//          String name = (String) kerberosToken.getPrincipal();
-//          if (!currentUser.isAuthenticated() || !currentUser.getPrincipal().equals(name)) {
-//            response = proceedToLogin(currentUser, kerberosToken);
-//          }
-//        }
-//        if (null == response) {
-//          LOG.warn("No Kerberos token received");
-//          response = new JsonResponse<>(Status.UNAUTHORIZED, "", null);
-//        }
-//        return response.build();
-//      } catch (AuthenticationException e){
-//        LOG.error("Error in Login", e);
-//      }
-//    }
-
+    JsonResponse<Map<String, String>> response = null;
     CognitoRealm cognitoRealm = getCognitoRealm();
     if(cognitoRealm != null && code != null){
       return loginWithCognito(code, cognitoRealm);
+    }
+    if (isKnoxSSOEnabled()) {
+      KnoxJwtRealm knoxJwtRealm = getJTWRealm();
+      Cookie cookie = headers.getCookies().get(knoxJwtRealm.getCookieName());
+      if (cookie != null && cookie.getValue() != null) {
+        Subject currentUser = SecurityUtils.getSubject();
+        JWTAuthenticationToken token = new JWTAuthenticationToken(null, cookie.getValue());
+        try {
+          String name = knoxJwtRealm.getName(token);
+          if (!currentUser.isAuthenticated() || !currentUser.getPrincipal().equals(name)) {
+            response = proceedToLogin(currentUser, token);
+          }
+        } catch (ParseException e) {
+          LOG.error("ParseException in LoginRestApi: ", e);
+        }
+      }
+      if (response == null) {
+        Map<String, String> data = new HashMap<>();
+        data.put("redirectURL", constructKnoxUrl(knoxJwtRealm, knoxJwtRealm.getLogin()));
+        response = new JsonResponse<>(Status.OK, "", data);
+      }
+      return response.build();
+    }
+
+    KerberosRealm kerberosRealm = getKerberosRealm();
+    if (null != kerberosRealm) {
+      try {
+        Map<String, Cookie> cookies = headers.getCookies();
+        KerberosToken kerberosToken = KerberosRealm.getKerberosTokenFromCookies(cookies);
+        if (null != kerberosToken) {
+          Subject currentUser = SecurityUtils.getSubject();
+          String name = (String) kerberosToken.getPrincipal();
+          if (!currentUser.isAuthenticated() || !currentUser.getPrincipal().equals(name)) {
+            response = proceedToLogin(currentUser, kerberosToken);
+          }
+        }
+        if (null == response) {
+          LOG.warn("No Kerberos token received");
+          response = new JsonResponse<>(Status.UNAUTHORIZED, "", null);
+        }
+        return response.build();
+      } catch (AuthenticationException e){
+        LOG.error("Error in Login", e);
+      }
     }
     return new JsonResponse<>(Status.METHOD_NOT_ALLOWED).build();
   }
@@ -168,38 +167,25 @@ public class LoginRestApi {
       if(status == HttpStatus.SC_OK){
         String postResponse = post.getResponseBodyAsString();
         CognitoToken token = CognitoToken.fromJson(postResponse);
-//        CognitoJwtVerifier cognitoJwtVerifier = new CognitoJwtVerifier();
-//        cognitoJwtVerifier.setCognitoUserPoolUrl("https://cognito-idp.eu-central-1.amazonaws.com/" + userPoolId);
-//        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
-//        JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(token.id_token);
-//        String username = (String) claims.getClaim("cognito:username");
-        LOG.info("COGNITO REALM REST API: " + cognitoRealm.toString());
-        cognitoRealm.doGetAuthenticationInfo(token);
-//        PrincipalCollection principals = new SimplePrincipalCollection(username, "CognitoRealm");
-//        Subject user = new Subject.Builder().authenticated(true).principals(principals).buildSubject();
-//        CognitoToken jwt = new CognitoToken(username, token.id_token);
-//        LOG.info("USERNAME: " + username);
-//        LOG.info("TOKEN ID: " + token.id_token);
-//        response = proceedToLogin(user, jwt);
-//        return response.build();
-//        String session = claims.getStringClaim("event_id");
-//        UserSessionContainer.instance.setSession(username, session);
-//
-//        HashSet<String> userAndRoles = new HashSet<>();
-//        userAndRoles.add(username);
-//        ServiceContext context = new ServiceContext(
-//                new org.apache.zeppelin.user.AuthenticationInfo(username), userAndRoles);
-//        UserTokenContainer.getInstance().setUserToken(username, token.id_token);
-//        SimpleAccount account = new SimpleAccount(username, token.id_token, "CognitoRealm");
-//        PrincipalCollection principals = new SimplePrincipalCollection(username, "CognitoRealm");
-//        Subject subject = new Subject.Builder().principals(principals).buildSubject();
-        Subject subject = SecurityUtils.getSubject();
+        CognitoJwtVerifier cognitoJwtVerifier = new CognitoJwtVerifier();
+        cognitoJwtVerifier.setCognitoUserPoolUrl("https://cognito-idp.eu-central-1.amazonaws.com/" + userPoolId);
+        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
+        JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(token.id_token);
+        String username = (String) claims.getClaim("cognito:username");
+        PrincipalCollection principals = new SimplePrincipalCollection(username, "CognitoRealm");
+        Subject subject = new Subject.Builder().principals(principals).buildSubject();
         response = proceedToLogin(subject, token);
         return response.build();
       }
     } catch (HttpException e) {
       e.printStackTrace();
     } catch (IOException e) {
+      e.printStackTrace();
+    } catch (ParseException e) {
+      e.printStackTrace();
+    } catch (JOSEException e) {
+      e.printStackTrace();
+    } catch (BadJOSEException e) {
       e.printStackTrace();
     }
     return new JsonResponse<>(Status.METHOD_NOT_ALLOWED).build();
