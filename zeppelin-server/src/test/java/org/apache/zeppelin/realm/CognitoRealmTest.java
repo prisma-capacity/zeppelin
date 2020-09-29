@@ -29,7 +29,9 @@ import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import java.net.MalformedURLException;
 import java.text.ParseException;
 import java.util.Properties;
 
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -56,7 +59,7 @@ public class CognitoRealmTest {
 
     @Before
     public void setup() throws IOException {
-        Properties props = getProperties();
+        Properties props = PropertiesHelper.getProperties(CognitoRealm.class);
         username = props.getProperty("username");
         password = props.getProperty("password");
 
@@ -104,6 +107,9 @@ public class CognitoRealmTest {
         assertEquals(password, authenticationInfo.getCredentials());
     }
 
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
+
     @Test
     public void doGetAuthenticationInfo_userIsNotPresentInCognito() {
         UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
@@ -121,16 +127,5 @@ public class CognitoRealmTest {
         }
     }
 
-    private Properties getProperties() throws IOException {
-        Properties prop = new Properties();
-        String propFile = "aws.cognito.properties";
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propFile);
-        if (inputStream != null) {
-            prop.load(inputStream);
-        } else {
-            LOG.info("AWS Cognito properties '" + propFile + "' are not set or file cannot be found");
-            throw new FileNotFoundException("AWS Cognito properties '" + propFile + "' are not set or file cannot be found");
-        }
-        return prop;
-    }
+
 }

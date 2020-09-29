@@ -43,9 +43,8 @@ public class CognitoJwtVerifier {
     private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
 
-    public CognitoJwtVerifier() throws MalformedURLException {
+    public CognitoJwtVerifier() {
         LOG.info("Init CognitoJwtVerifier");
-        //cognitoUserPoolUrl + "/.well-known/jwks.json"));
     }
 
     public JWTClaimsSet verifyJwt(String token) throws ParseException, JOSEException, BadJOSEException, MalformedURLException {
@@ -67,12 +66,10 @@ public class CognitoJwtVerifier {
     }
 
     public void setCognitoUserPoolUrl(String cognitoUserPoolUrl) {
-        LOG.info("setCognitoUserPoolUrl: " + cognitoUserPoolUrl);
         this.cognitoUserPoolUrl = cognitoUserPoolUrl;
     }
 
     public void setCognitoUserPoolClientId(String cognitoUserPoolClientId) {
-        LOG.info("cognitoUserPoolClientId: " + cognitoUserPoolClientId);
         this.cognitoUserPoolClientId = cognitoUserPoolClientId;
     }
 }
