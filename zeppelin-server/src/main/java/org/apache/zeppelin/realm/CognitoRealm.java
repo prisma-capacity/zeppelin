@@ -23,6 +23,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.*;
+import org.apache.shiro.authc.pam.UnsupportedTokenException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
@@ -86,25 +87,12 @@ public class CognitoRealm extends AuthorizingRealm {
 
         LOG.info("USER EMAIL: " + user.getEmail());
         LOG.info("USERNAME: " + user.getUsername());
+        LOG.info("ROLES: " + user.getRoles());
 
         authorizationInfo.addRoles(user.getRoles());
-        for (String role : authorizationInfo.getRoles()) {
-            LOG.info("ROLE: " + role);
-        }
 
-        authorizationInfo.addStringPermission("read");
+//        authorizationInfo.addStringPermission("read");
 
-
-//        String[] split = stringPrincipals.split(",");
-//        for (String s : split) {
-//            LOG.info("SPLIT STRING IS: " + s);
-//        }
-//        List principalsFromRealm = Arrays.asList(principals.fromRealm(this.name).toArray());
-//        principalsFromRealm.stream().forEach(i -> LOG.info("Principal item: " + i));
-        LOG.info("End of authorization info");
-//        principalsFromRealm.stream().map(i -> authorizationInfo.addRole(i))
-//        for (Object item : principalsFromRealm) {
-//    }
         return authorizationInfo;
     }
 
@@ -136,7 +124,7 @@ public class CognitoRealm extends AuthorizingRealm {
                 return authenticationInfo;
             } else {
                 LOG.info("Unexpected Cognito Challenge.");
-                return authenticationInfo;
+                throw new AuthenticationException("Unexpected Cognito Challenge.");
             }
         } catch (Exception e) {
             LOG.info("An exception has occurred.", e);
