@@ -14,7 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -22,6 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class SecretHashCalculator {
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
+
     public static String calculate(String userPoolClientId, String userPoolClientSecret, String userName) {
         final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
 
@@ -35,7 +40,8 @@ public class SecretHashCalculator {
             byte[] rawHmac = mac.doFinal(userPoolClientId.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(rawHmac);
         } catch (Exception e) {
-            throw new RuntimeException("Error while calculating ");
+            LOG.info("Error while calculating the hash.", e);
+            throw new RuntimeException("Error while calculating the hash.", e);
         }
     }
 }

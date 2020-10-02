@@ -18,104 +18,114 @@
  */
 package org.apache.zeppelin.realm;
 
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
+import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
+import com.amazonaws.services.cognitoidp.model.UserNotFoundException;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.jwt.JWTClaimsSet;
+import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.zeppelin.realm.cognito.CognitoClientProvider;
+import org.apache.zeppelin.realm.cognito.CognitoJwtVerifier;
+import org.apache.zeppelin.realm.cognito.CognitoRealm;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.MalformedURLException;
+import java.text.ParseException;
 import java.util.Properties;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class CognitoRealmTest {
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealmTest.class);
 
-    CognitoRealm cognito;
+    CognitoRealm uut;
     String username;
     String password;
+    AWSCognitoIdentityProvider cognito;
+
+    CognitoJwtVerifier cognitoJwtVerifier;
+    CognitoClientProvider cognitoClientProvider;
 
     @Before
-    public void setup() throws IOException, URISyntaxException {
-        URL resourcePath = this.getClass().getClassLoader().getResource("aws.cognito.properties");
-        File file = new File(resourcePath.toURI());
-        if(file.exists() != false){
-            cognito = new CognitoRealm();
-            Properties props = getProperties();
-            username = props.getProperty("username");
-            password = props.getProperty("password");
-            String userPoolClientId = props.getProperty("userPoolClientId");
-            String userPoolClientSecret = props.getProperty("userPoolClientSecret");
-            String userPoolId = props.getProperty("userPoolId");
-            String userPoolUrl = props.getProperty("userPoolUrl");
-            cognito.setUserPoolClientId(userPoolClientId);
-            cognito.setUserPoolId(userPoolId);
-            cognito.setUserPoolUrl(userPoolUrl);
-            cognito.setUserPoolClientSecret(userPoolClientSecret);
-        }else {
-            System.out.println("You need to set the aws.cognito.properties in order to test. Take the .template and adjust it");
-        }
+    public void setup() throws IOException {
+        Properties props = PropertiesHelper.getProperties(CognitoRealm.class);
+        username = props.getProperty("username");
+        password = props.getProperty("password");
+
+        uut = new CognitoRealm();
+
+        uut.setUserPoolId(props.getProperty("userPoolId"));
+        uut.setUserPoolClientId(props.getProperty("userPoolClientId"));
+        uut.setUserPoolUrl(props.getProperty("userPoolUrl"));
+        uut.setUserPoolClientSecret(props.getProperty("userPoolClientSecret"));
+
+        cognitoJwtVerifier = mock(CognitoJwtVerifier.class);
+        cognitoClientProvider = mock(CognitoClientProvider.class);
+        cognito = mock(AWSCognitoIdentityProvider.class);
+
+        uut.setCognitoJwtVerifier(cognitoJwtVerifier);
+        when(cognitoClientProvider.getCognito()).thenReturn(cognito);
+        uut.setCognitoClientProvider(cognitoClientProvider);
     }
 
     @Test
-    public void testIfCognitoURLIsValid() {
-        assertEquals(true, cognito.isCognitoUrlValid("https://test.com"));
+    public void doGetAuthenticationInfo_userIsPresentInCognito() throws MalformedURLException, BadJOSEException, ParseException, JOSEException {
+
+        String validToken = "eyJraWQiOiJDZEY5bVA2NHVRWURJMXVucFJTcldPdDN1MmlyMlNvSysrXC92M0hsaHdnOD0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI3OTc2ZTg4OS04NWFlLTRhMjQtOWQ0YS1lODljZmJkNzdmYWUiLCJhdWQiOiIzYTBiZmpxbHRjYTB2N3RrdmRyYzZscTM5IiwiY29nbml0bzpncm91cHMiOlsiRGV2ZWxvcG1lbnQiXSwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV2ZW50X2lkIjoiZWIzNzQ3ZDEtOTNiZC00NDNkLWEyMGItZmY5MTEwNTFkNGNhIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE2MDEyOTMxNDQsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS1jZW50cmFsLTEuYW1hem9uYXdzLmNvbVwvZXUtY2VudHJhbC0xX2NHS055V2ZLOSIsImNvZ25pdG86dXNlcm5hbWUiOiJzaW1vbmEuaWxpZXZza2EiLCJleHAiOjE2MDEzNzk1NDQsImlhdCI6MTYwMTI5MzE0NCwiZW1haWwiOiJzaW1vbmEuaWxpZXZza2FAcHJpc21hLWNhcGFjaXR5LmV1In0.U_Pb8dok7GM846SofG8dzMuQXvO9GSzW366TX48bZhZzlbTXTsQPoLWhe7oTVFbqyDUGwgk0RrlxMQRigV1AYDNlBfztmG4ByKabjkUquum57qVlJqieYWQlePK-waqRCUAjRXHhAfu_SkKfRlrp1Cm2Pp4lEomFb5DQXIH_d-c_Y3AGbFt8wd1mo_Yu4su-4X9nb67K8Ll0Kc84JS73_9wJcmEoS9rw5yKi-GJDUBO7Rk0tiOIdIezLhSp5gBc5Ym8CuTHgtPhrt8wRPwrvf44xNW-2cF_htoyAr-vTb73vIrgh15magGuEKP4QFt93qETP4a0BpXtcgE10m5Tapw";
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
+        usernamePasswordToken.setPassword(password.toCharArray());
+        usernamePasswordToken.setUsername(username);
+
+        AdminInitiateAuthResult adminInitiateAuthResult = mock(AdminInitiateAuthResult.class);
+
+        when(cognito.adminInitiateAuth(any())).thenReturn(adminInitiateAuthResult);
+        when(adminInitiateAuthResult.getChallengeName()).thenReturn(null);
+
+        AuthenticationResultType authResult = mock(AuthenticationResultType.class);
+
+        when(adminInitiateAuthResult.getAuthenticationResult()).thenReturn(authResult);
+        when(authResult.getIdToken()).thenReturn(validToken);
+
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder().claim("cognito:username", username).build();
+        when(cognitoJwtVerifier.verifyJwt(any())).thenReturn(jwtClaimsSet);
+
+        AuthenticationInfo authenticationInfo = uut.doGetAuthenticationInfo(usernamePasswordToken);
+
+        PrincipalCollection principals = authenticationInfo.getPrincipals();
+        assertEquals(username, principals.toString());
+        assertEquals(password, authenticationInfo.getCredentials());
     }
+
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     @Test
-    public void testIfCognitoURLIsNotValid() {
-        assertEquals(false, cognito.isCognitoUrlValid("saddfsdf"));
-    }
+    public void doGetAuthenticationInfo_userIsNotPresentInCognito() {
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
+        usernamePasswordToken.setPassword(password.toCharArray());
+        usernamePasswordToken.setUsername(username);
 
-    @Test
-    public void testCognitoConnection() {
-        assertNotNull(cognito.getCognito());
-    }
+        when(cognito.adminInitiateAuth(any())).thenThrow(new UserNotFoundException("Cognito could not find the user"));
 
-    @Test
-    public void testInitiateAuthRequest() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, IOException {
-        Method method = CognitoRealm.class.getDeclaredMethod("initiateAuthRequest", Map.class);
-        method.setAccessible(true);
-        final Map<String, String> authParams = new HashMap<>();
-
-        authParams.put("USERNAME", username);
-        authParams.put("PASSWORD", password);
-        authParams.put("SECRET_HASH", SecretHashCalculator.calculate
-                (cognito.getUserPoolClientId(), cognito.getUserPoolClientSecret(), username));
-        AdminInitiateAuthResult authResult = (AdminInitiateAuthResult) method.invoke(cognito, authParams);
-        assertNotNull(authResult.getAuthenticationResult().getAccessToken());
-    }
-
-//    @Test
-//    public void testRespondToChallengeAuthRequest() {
-//        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken();
-//        usernamePasswordToken.setPassword(password.toCharArray());
-//        usernamePasswordToken.setUsername(username);
-//        cognito.doGetAuthenticationInfo(usernamePasswordToken);
-//    }
-
-    private Properties getProperties() throws IOException {
-        Properties prop = new Properties();
         try {
-            String propFile = "aws.cognito.properties";
-            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propFile);
-            if (inputStream != null) {
-                prop.load(inputStream);
-            } else {
-                throw new FileNotFoundException("AWS Cognito properties '" + propFile + "' are not set or file cannot be found");
-            }
-        }catch (Exception e) {
-            System.out.println("Exception: " + e);
-        } finally {
-            return prop;
+            uut.doGetAuthenticationInfo(usernamePasswordToken);
+            fail();
+            LOG.info("Test failed! Was supposed to throw an exception.");
+        } catch (Exception e) {
+            assertEquals(UserNotFoundException.class, e.getCause().getClass());
         }
     }
+
+
 }

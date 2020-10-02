@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -23,7 +23,6 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jose.proc.JWSAlgorithmFamilyJWSKeySelector;
-import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
@@ -38,52 +37,46 @@ import java.util.HashSet;
 
 public class CognitoJwtVerifier {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CognitoRealm.class);
-
-    private JWKSource jwkSource;
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
 
     private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
-
     private String cognitoUserPoolId;
-
-    public CognitoJwtVerifier() throws MalformedURLException {
+    private final String cognitoJwtUrl = "https://cognito-idp.eu-central-1.amazonaws.com/";
+    public CognitoJwtVerifier() {
         LOG.info("Init CognitoJwtVerifier");
-        //cognitoUserPoolUrl + "/.well-known/jwks.json"));
     }
 
     public JWTClaimsSet verifyJwt(String token) throws ParseException, JOSEException, BadJOSEException, MalformedURLException {
-        jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + "/" + cognitoUserPoolId + "/.well-known/jwks.json"));
-
+        JWKSource jwkSource = new RemoteJWKSet<>(new URL(cognitoJwtUrl + cognitoUserPoolId + "/.well-known/jwks.json"));
         DefaultJWTProcessor jwtProcessor = new DefaultJWTProcessor<>();
         JWSAlgorithmFamilyJWSKeySelector keySelector = new JWSAlgorithmFamilyJWSKeySelector<>(JWSAlgorithm.Family.RSA, jwkSource);
 
         jwtProcessor.setJWSKeySelector(keySelector);
         jwtProcessor.setJWTClaimsSetVerifier(new DefaultJWTClaimsVerifier(
                 new JWTClaimsSet.Builder()
-                        .issuer(cognitoUserPoolUrl + "/" + cognitoUserPoolId)
+                        .issuer(cognitoJwtUrl + cognitoUserPoolId)
                         .audience(cognitoUserPoolClientId)
                         .claim("token_use", "id")
                         .build(),
                 new HashSet<>(Arrays.asList("sub", "iat", "exp", "cognito:username"))));
-        LOG.info("Build Claimsset");
+
         return jwtProcessor.process(token, null);
     }
 
     public void setCognitoUserPoolUrl(String cognitoUserPoolUrl) {
-        this.cognitoUserPoolUrl = "https://cognito-idp.eu-central-1.amazonaws.com";
+        this.cognitoUserPoolUrl = cognitoUserPoolUrl;
+    }
+
+    public void setCognitoUserPoolId(String cognitoUserPoolId) {
+        this.cognitoUserPoolId = cognitoUserPoolId;
     }
 
     public void setCognitoUserPoolClientId(String cognitoUserPoolClientId) {
-        LOG.info("cognitoUserPoolClientId: " + cognitoUserPoolClientId);
         this.cognitoUserPoolClientId = cognitoUserPoolClientId;
     }
 
     public String getCognitoUserPoolUrl() {
         return cognitoUserPoolUrl;
-    }
-
-    public void setCognitoUserPoolId(String cognitoUserPoolId) {
-        this.cognitoUserPoolId = cognitoUserPoolId;
     }
 }

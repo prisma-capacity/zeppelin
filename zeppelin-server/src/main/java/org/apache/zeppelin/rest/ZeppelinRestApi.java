@@ -31,9 +31,13 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authz.annotation.RequiresRoles;
+import org.apache.shiro.subject.Subject;
 import org.apache.zeppelin.annotation.ZeppelinApi;
 import org.apache.zeppelin.server.JsonResponse;
 import org.apache.zeppelin.util.Util;
+import org.slf4j.LoggerFactory;
 
 /**
  * Zeppelin root rest api endpoint.
@@ -42,7 +46,10 @@ import org.apache.zeppelin.util.Util;
  */
 @Path("/")
 @Singleton
+@RequiresRoles("developer")
 public class ZeppelinRestApi {
+
+  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(ZeppelinRestApi.class);
 
   /**
    * Get the root endpoint Return always 200.
@@ -58,10 +65,21 @@ public class ZeppelinRestApi {
   @Path("version")
   @ZeppelinApi
   public Response getVersion() {
+    LOG.info("In getVersion!");
     Map<String, String> versionInfo = new HashMap<>();
     versionInfo.put("version", Util.getVersion());
     versionInfo.put("git-commit-id", Util.getGitCommitId());
     versionInfo.put("git-timestamp", Util.getGitTimestamp());
+
+    Subject currentUser = SecurityUtils.getSubject();
+
+    if (currentUser.hasRole("developer")) {
+      //show the admin button
+      LOG.info("CURRENT USER IS DEVELOPER!");
+    } else {
+      //don't show the button?  Grey it out?
+      LOG.info("CURRENT USER IS NOT!");
+    }
 
     return new JsonResponse<>(Response.Status.OK, "Zeppelin version", versionInfo).build();
   }
