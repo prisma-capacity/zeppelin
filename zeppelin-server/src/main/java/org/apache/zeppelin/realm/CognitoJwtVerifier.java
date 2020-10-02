@@ -43,19 +43,20 @@ public class CognitoJwtVerifier {
     private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
     private String cognitoUserPoolId;
+    private final String cognitoJwtUrl = "https://cognito-idp.eu-central-1.amazonaws.com/";
     public CognitoJwtVerifier() {
         LOG.info("Init CognitoJwtVerifier");
     }
 
     public JWTClaimsSet verifyJwt(String token) throws ParseException, JOSEException, BadJOSEException, MalformedURLException {
-        JWKSource jwkSource = new RemoteJWKSet<>(new URL(cognitoUserPoolUrl + "/" + cognitoUserPoolId + "/.well-known/jwks.json"));
+        JWKSource jwkSource = new RemoteJWKSet<>(new URL(cognitoJwtUrl + cognitoUserPoolId + "/.well-known/jwks.json"));
         DefaultJWTProcessor jwtProcessor = new DefaultJWTProcessor<>();
         JWSAlgorithmFamilyJWSKeySelector keySelector = new JWSAlgorithmFamilyJWSKeySelector<>(JWSAlgorithm.Family.RSA, jwkSource);
 
         jwtProcessor.setJWSKeySelector(keySelector);
         jwtProcessor.setJWTClaimsSetVerifier(new DefaultJWTClaimsVerifier(
                 new JWTClaimsSet.Builder()
-                        .issuer(cognitoUserPoolUrl + "/" + cognitoUserPoolId)
+                        .issuer(cognitoJwtUrl + cognitoUserPoolId)
                         .audience(cognitoUserPoolClientId)
                         .claim("token_use", "id")
                         .build(),
