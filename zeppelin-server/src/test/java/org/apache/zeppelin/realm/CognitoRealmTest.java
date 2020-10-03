@@ -76,7 +76,7 @@ public class CognitoRealmTest {
 
         uut.setCognitoJwtVerifier(cognitoJwtVerifier);
         when(cognitoClientProvider.getCognito()).thenReturn(cognito);
-        uut.setCognitoClientProvider(cognitoClientProvider);
+        // uut.setCognitoClientProvider(cognitoClientProvider);
     }
 
     @Test
