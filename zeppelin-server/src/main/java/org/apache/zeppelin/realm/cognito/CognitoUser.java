@@ -17,17 +17,29 @@
 
 package org.apache.zeppelin.realm.cognito;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CognitoUser {
     private String username;
     private String email;
-    private List<String> roles;
+    private List<String> roles = new ArrayList<>();
 
     public CognitoUser(String username, String email, List<String> roles){
         this.username = username;
         this.email = email;
-        this.roles = roles;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        if (roles.isEmpty()) {
+            this.roles.add("prisma");
+        } else {
+            this.roles = roles;
+        }
     }
 
 //    public String getUsername() {

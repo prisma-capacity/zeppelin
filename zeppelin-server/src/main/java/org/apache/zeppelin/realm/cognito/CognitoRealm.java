@@ -17,7 +17,10 @@
 package org.apache.zeppelin.realm.cognito;
 
 
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthRequest;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
+import com.amazonaws.services.cognitoidp.model.AuthFlowType;
 import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.httpclient.HttpClient;
@@ -26,11 +29,12 @@ import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.config.Ini;
 import org.apache.shiro.realm.AuthorizingRealm;
+import org.apache.shiro.realm.text.IniRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,9 +55,44 @@ public class CognitoRealm extends AuthorizingRealm {
     private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
     private final HttpClient httpClient;
     private CognitoJwtVerifier cognitoJwtVerifier;
-    private CognitoClientProvider cognito;
-    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) throws MalformedURLException {
-        LOG.info("setCognitoJwtVerifier: " + cognitoJwtVerifier.toString());
+    private CognitoClientProvider cognitoClientProvider;
+    private AWSCognitoIdentityProvider cognito;
+    private final Map<String, String> roles = new HashMap<>();
+    private Ini ini;
+
+    public Ini getIni() {
+        return this.ini;
+    }
+
+    public void setIni() {
+        IniRealm iniRealm = new IniRealm("classpath:shiro.ini");
+        this.ini = iniRealm.getIni();
+    }
+
+    public Map<String, String> getRoles() {
+        return this.roles;
+    }
+
+    public void setRoles() {
+        this.roles.putAll(this.ini.getSection("roles"));
+    }
+
+    public List<String> getRolesList() {
+        List<String> roles = new ArrayList<>();
+        for (Map.Entry<String, String> entry : this.roles.entrySet()) {
+            roles.add(entry.getKey());
+        }
+        return roles;
+    }
+
+    public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
+        this.cognitoClientProvider = cognitoClientProvider;
+        if (cognitoClientProvider != null) {
+            this.cognito = this.cognitoClientProvider.getCognito();
+        }
+    }
+
+    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
         cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
         cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
         this.cognitoJwtVerifier = cognitoJwtVerifier;
@@ -70,13 +109,24 @@ public class CognitoRealm extends AuthorizingRealm {
     @Override
     public void onInit() {
         super.onInit();
-        cognito = new CognitoClientProvider(userPoolClientId, userPoolId);
+        setIni();
+        setRoles();
     }
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        LOG.info("doGetAuthorizationInfo: " + principals.toString());
-        return new SimpleAuthorizationInfo();
+        String stringPrincipals = principals.toString();
+        LOG.info("doGetAuthorizationInfo: " + stringPrincipals);
+
+        SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
+        CognitoUser user = (CognitoUser) principals.getPrimaryPrincipal();
+
+        LOG.info("USER EMAIL: " + user.getEmail());
+        LOG.info("USERNAME: " + user.getUsername());
+        LOG.info("ROLES: " + user.getRoles());
+
+        authorizationInfo.addRoles(user.getRoles());
+        return authorizationInfo;
     }
 
     @Override
@@ -113,72 +163,37 @@ public class CognitoRealm extends AuthorizingRealm {
 //                authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
 //                return authenticationInfo;
             } else {
-                LOG.info("Unexpected Cognito Challenge.");
+                LOG.error("Unexpected Cognito Challenge.");
                 throw new AuthenticationException("Unexpected Cognito Challenge.");
             }
         } catch (Exception e) {
-            LOG.info("An exception has occurred.", e);
-            throw new RuntimeException("An exception has occurred.", e);
+            LOG.error("An exception has occurred.", e);
+            throw new AuthenticationException("An exception has occurred.", e);
         }
-//                AuthenticationResultType authenticationResult = authResponse.getAuthenticationResult();
-//
-//                String accessToken = authenticationResult.getAccessToken();
-//
-//                // parse and verify the jwt token
-//                try{
-//                    JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
-//                }catch(Exception ex){
-//                    LOG.info("Exception: " + ex.getMessage());
-//                }
-//            return new SimpleAuthenticationInfo(username, password, this.getName());
-//        } else if(token instanceof CognitoToken) {
-//            CognitoToken cognitoToken = (CognitoToken) token;
-//            LOG.info("Should have a Cognito Token" + cognitoToken);
-//            String username = "";
-//            try{
-//                cognitoJwtVerifier.setCognitoUserPoolId(userPoolId);
-//                JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(cognitoToken.id_token);
-//                username = claims.getStringClaim("cognito:username");
-//            }catch(Exception ex){
-//                LOG.info("Exception: " + ex.getMessage());
-//            }
-//            return new SimpleAuthenticationInfo(username, cognitoToken.id_token, this.getName());
-//        }
-//        return null;
     }
 
-        private SimpleAuthenticationInfo buildCognitoAuthenticationInfo(String password, String idToken) {
-            SimpleAuthenticationInfo authenticationInfo = null;
-            try {
-                JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
-                LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
+    private SimpleAuthenticationInfo buildCognitoAuthenticationInfo(String password, String idToken) {
+        SimpleAuthenticationInfo authenticationInfo = null;
+        try {
+            JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
+            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
 
+            CognitoUser cognitoUser = new CognitoUser();
+            cognitoUser.setUsername(idTokenClaims.getStringClaim("cognito:username"));
+            cognitoUser.setEmail(idTokenClaims.getStringClaim("email"));
+
+            if (!idTokenClaims.getClaims().containsKey("cognito:groups")) {
+                cognitoUser.setRoles(Collections.singletonList("prisma"));
+            } else {
                 String[] rolesFromToken = idTokenClaims.getStringArrayClaim("cognito:groups");
-
-                String realmName = this.getName();
-//            SimplePrincipalCollection principalCollection = new SimplePrincipalCollection();
-//            principalCollection.add(idTokenClaims.getClaim("cognito:username"), realmName);
-//            principalCollection.addAll(list, realmName);
-//            LOG.info("PRINCIPAL COLLECTION: " + principalCollection);
-//            LOG.info("PRIMARY PRINCIPAL: " + principalCollection.getPrimaryPrincipal());
-
-                CognitoUser cognitoUser = new CognitoUser(idTokenClaims.getStringClaim("cognito:username"),
-                        idTokenClaims.getStringClaim("email"),
-                        Arrays.asList(rolesFromToken));
-//                cognitoUser.setUsername(idTokenClaims.getStringClaim("cognito:username"));
-//                cognitoUser.setEmail(idTokenClaims.getStringClaim("email"));
-//                cognitoUser.setRoles(Arrays.asList(rolesFromToken));
-
+                cognitoUser.setRoles(Arrays.asList(rolesFromToken));
+            }
 
                 SecurityUtils.getSubject().getSession().setAttribute("cognitoUser", cognitoUser);
 
-//            authenticationInfo = new SimpleAuthenticationInfo(idTokenClaims.getClaim("cognito:username"), password, this.getName());
-//            authenticationInfo = new SimpleAuthenticationInfo(principalCollection, password, realmName);
-                authenticationInfo = new SimpleAuthenticationInfo(cognitoUser, password, realmName);
-            } catch (Exception e) {
-                LOG.info("Exception in normal auth: " + e.getMessage());
-            }
-            return authenticationInfo;
+            authenticationInfo = new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
+        } catch (Exception e) {
+            LOG.info("Exception in normal auth: " + e.getMessage());
         }
 
 

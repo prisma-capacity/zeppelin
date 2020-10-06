@@ -62,13 +62,16 @@ public class CognitoRealmTest {
         Properties props = PropertiesHelper.getProperties(CognitoRealm.class);
         username = props.getProperty("username");
         password = props.getProperty("password");
-
+        String userPoolId = props.getProperty("userPoolId");
+        String userPoolClientId = props.getProperty("userPoolClientId");
+        String userPoolUrl = props.getProperty("userPoolUrl");
+        String userPoolClientSecret = props.getProperty("userPoolClientSecret");
         uut = new CognitoRealm();
 
-        uut.setUserPoolId(props.getProperty("userPoolId"));
-        uut.setUserPoolClientId(props.getProperty("userPoolClientId"));
-        uut.setUserPoolUrl(props.getProperty("userPoolUrl"));
-        uut.setUserPoolClientSecret(props.getProperty("userPoolClientSecret"));
+        uut.setUserPoolId(userPoolId);
+        uut.setUserPoolClientId(userPoolClientId);
+        uut.setUserPoolUrl(userPoolUrl);
+        uut.setUserPoolClientSecret(userPoolClientSecret);
 
         cognitoJwtVerifier = mock(CognitoJwtVerifier.class);
         cognitoClientProvider = mock(CognitoClientProvider.class);
@@ -76,7 +79,7 @@ public class CognitoRealmTest {
 
         uut.setCognitoJwtVerifier(cognitoJwtVerifier);
         when(cognitoClientProvider.getCognito()).thenReturn(cognito);
-        // uut.setCognitoClientProvider(cognitoClientProvider);
+        uut.onInit();
     }
 
     @Test

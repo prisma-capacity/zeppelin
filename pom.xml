@@ -24,7 +24,7 @@
   <groupId>org.apache.zeppelin</groupId>
   <artifactId>zeppelin</artifactId>
   <packaging>pom</packaging>
-  <version>0.9.0-SNAPSHOT</version>
+  <version>0.9.0-preview2</version>
   <name>Zeppelin</name>
   <description>Zeppelin project</description>
   <url>https://zeppelin.apache.org</url>
@@ -56,27 +56,27 @@
     <module>zeppelin-interpreter</module>
     <module>zeppelin-zengine</module>
     <module>zeppelin-display</module>
-<!--    <module>rlang</module>-->
+    <module>rlang</module>
 <!--    <module>zeppelin-jupyter-interpreter</module>-->
 <!--    <module>zeppelin-jupyter-interpreter-shaded</module>-->
-<!--    <module>kotlin</module>-->
+    <module>kotlin</module>
 <!--    <module>groovy</module>-->
 <!--    <module>spark</module>-->
 <!--    <module>submarine</module>-->
-<!--    <module>markdown</module>-->
+    <module>markdown</module>
 <!--    <module>mongodb</module>-->
-<!--    <module>angular</module>-->
-<!--    <module>shell</module>-->
+    <module>angular</module>
+    <module>shell</module>
 <!--    <module>livy</module>-->
 <!--    <module>hbase</module>-->
 <!--    <module>pig</module>-->
-<!--    <module>jdbc</module>-->
+    <module>jdbc</module>
 <!--    <module>file</module>-->
 <!--    <module>flink</module>-->
 <!--    <module>ignite</module>-->
 <!--    <module>influxdb</module>-->
 <!--    <module>kylin</module>-->
-<!--    <module>python</module>-->
+    <module>python</module>
 <!--    <module>lens</module>-->
 <!--    <module>cassandra</module>-->
 <!--    <module>elasticsearch</module>-->
@@ -86,9 +86,9 @@
 <!--    <module>neo4j</module>-->
 <!--    <module>sap</module>-->
 <!--    <module>scalding</module>-->
-<!--    <module>java</module>-->
+    <module>java</module>
 <!--    <module>beam</module>-->
-<!--    <module>hazelcastjet</module>-->
+    <module>hazelcastjet</module>
 <!--    <module>geode</module>-->
 <!--    <module>ksql</module>-->
 <!--    <module>sparql</module>-->
@@ -1084,20 +1084,6 @@
 <!--              <goal>enforce</goal>-->
 <!--            </goals>-->
 <!--          </execution>-->
-          <!-- https://maven.apache.org/enforcer/enforcer-rules/requireMavenVersion.html -->
-          <execution>
-            <id>enforce-maven</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireMavenVersion>
-                  <version>[3.1.0,)</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
           <!-- https://maven.apache.org/enforcer/enforcer-rules/requireMavenVersion.html -->
           <execution>
             <id>enforce-maven</id>
