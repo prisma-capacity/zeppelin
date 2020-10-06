@@ -17,12 +17,13 @@
 
 package org.apache.zeppelin.realm;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CognitoUser {
     private String username;
     private String email;
-    private List<String> roles;
+    private List<String> roles = new ArrayList<>();
 
     public String getUsername() {
         return username;
@@ -45,7 +46,11 @@ public class CognitoUser {
     }
 
     public void setRoles(List<String> roles) {
-        this.roles = roles;
+        if (roles.isEmpty()) {
+            this.roles.add("prisma");
+        } else {
+            this.roles = roles;
+        }
     }
 
     @Override
