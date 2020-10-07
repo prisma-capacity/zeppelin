@@ -55,31 +55,11 @@ public class CognitoRealm extends AuthorizingRealm {
     private final HttpClient httpClient;
     private CognitoJwtVerifier cognitoJwtVerifier;
     private CognitoClientProvider cognitoClientProvider;
-//    private AWSCognitoIdentityProvider cognito;
     private final Map<String, String> roles = new HashMap<>();
-//    private Ini ini;
-//
-//    public Ini getIni() {
-//        return this.ini;
-//    }
-//
-//    public void setIni() {
-//        IniRealm iniRealm = new IniRealm("classpath:shiro.ini");
-//        this.ini = iniRealm.getIni();
-//    }
-
-//    public Map<String, String> getRoles() {
-//        return this.roles;
-//    }
-//
-//    public void setRoles() {
-//        this.roles.putAll(this.ini.getSection("roles"));
-//    }
 
     public Map<String, String> getRolesList() {
         List<String> cognitoGroups = cognitoClientProvider.getCognitoGroups();
         Map<String, String> roles = new HashMap<>();
-        LOG.info("Roles: " + roles);
         for (String entry : cognitoGroups) {
             roles.put(entry, "*");
         }
@@ -88,18 +68,7 @@ public class CognitoRealm extends AuthorizingRealm {
 
     public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
         this.cognitoClientProvider = cognitoClientProvider;
-//        if (cognitoClientProvider != null) {
-//            this.cognito = this.cognitoClientProvider.getCognito();
-//        }
     }
-
-//    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
-//        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
-//        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
-//        this.cognitoJwtVerifier = cognitoJwtVerifier;
-//
-//    }
-
 
     public CognitoRealm() throws MalformedURLException {
         super();
@@ -118,15 +87,9 @@ public class CognitoRealm extends AuthorizingRealm {
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-//        String stringPrincipals = principals.toString();
-//        LOG.info("doGetAuthorizationInfo: " + stringPrincipals);
 
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
         CognitoUser user = (CognitoUser) principals.getPrimaryPrincipal();
-
-//        LOG.info("USER EMAIL: " + user.getEmail());
-//        LOG.info("USERNAME: " + user.getUsername());
-//        LOG.info("ROLES: " + user.getRoles());
 
         authorizationInfo.addRoles(user.getRoles());
         return authorizationInfo;
@@ -173,11 +136,10 @@ public class CognitoRealm extends AuthorizingRealm {
         SimpleAuthenticationInfo authenticationInfo = null;
         try {
             JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
-//            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
+            LOG.debug("TOKEN CLAIMS: " + idTokenClaims.getClaims());
 
             CognitoUser cognitoUser = new CognitoUser(idTokenClaims.getStringClaim("cognito:username"),
                     idTokenClaims.getStringClaim("email"));
-
 
             if (!idTokenClaims.getClaims().containsKey("cognito:groups")) {
                 cognitoUser.setRoles(Collections.singletonList("prisma"));

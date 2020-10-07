@@ -39,7 +39,6 @@ public class CognitoJwtVerifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
 
-//    private String cognitoUserPoolUrl;
     private String cognitoUserPoolClientId;
     private String cognitoUserPoolId;
     private final String cognitoJwtUrl = "https://cognito-idp.eu-central-1.amazonaws.com/";
@@ -66,20 +65,4 @@ public class CognitoJwtVerifier {
 
         return jwtProcessor.process(token, null);
     }
-
-//    public void setCognitoUserPoolUrl(String cognitoUserPoolUrl) {
-//        this.cognitoUserPoolUrl = cognitoUserPoolUrl;
-//    }
-//
-//    public void setCognitoUserPoolId(String cognitoUserPoolId) {
-//        this.cognitoUserPoolId = cognitoUserPoolId;
-//    }
-//
-//    public void setCognitoUserPoolClientId(String cognitoUserPoolClientId) {
-//        this.cognitoUserPoolClientId = cognitoUserPoolClientId;
-//    }
-//
-//    public String getCognitoUserPoolUrl() {
-//        return cognitoUserPoolUrl;
-//    }
 }

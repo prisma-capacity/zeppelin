@@ -28,10 +28,10 @@ public class CognitoUser {
     private String email;
     private List<String> roles = new ArrayList<>();
     private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
+
     public CognitoUser(String username, String email){
         this.username = username;
         this.email = email;
-        LOG.info("Setting up a user: " + username + " " + email);
     }
 
     public List<String> getRoles() {
@@ -49,18 +49,10 @@ public class CognitoUser {
     public String getUsername() {
         return username;
     }
-//
-//    public void setUsername(String username) {
-//        this.username = username;
-//    }
-//
+
     public String getEmail() {
         return email;
     }
-//
-//    public void setEmail(String email) {
-//        this.email = email;
-//    }
 
     @Override
     public String toString() {

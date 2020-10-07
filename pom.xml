@@ -74,12 +74,12 @@
     <module>file</module>
 <!--    <module>flink</module>-->
 <!--    <module>ignite</module>-->
-<!--    <module>influxdb</module>-->
+    <module>influxdb</module>
 <!--    <module>kylin</module>-->
     <module>python</module>
 <!--    <module>lens</module>-->
 <!--    <module>cassandra</module>-->
-<!--    <module>elasticsearch</module>-->
+    <module>elasticsearch</module>
 <!--    <module>bigquery</module>-->
 <!--    <module>alluxio</module>-->
 <!--    <module>scio</module>-->
@@ -95,7 +95,7 @@
     <module>zeppelin-common</module>
     <module>zeppelin-client</module>
     <module>zeppelin-client-examples</module>
-    <module>zeppelin-web</module>
+<!--    <module>zeppelin-web</module>-->
     <module>zeppelin-interpreter-shaded</module>
     <module>zeppelin-server</module>
 <!--    <module>zeppelin-jupyter</module>-->
@@ -137,7 +137,7 @@
     <commons.collections.version>3.2.2</commons.collections.version>
     <commons.logging.version>1.1.1</commons.logging.version>
     <commons.cli.version>1.4</commons.cli.version>
-    <shiro.version>1.4.2</shiro.version>
+    <shiro.version>1.6.0</shiro.version>
     <joda.version>2.9.9</joda.version>
     <bouncycastle.version>1.60</bouncycastle.version>
 
@@ -880,7 +880,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.11.0</version>
+        <version>3.3.3</version>
         <scope>test</scope>
       </dependency>
 

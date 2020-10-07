@@ -248,7 +248,7 @@ public class LoginRestApi {
       data.put("principal", principal);
       data.put("roles", GSON.toJson(roles));
       data.put("ticket", ticket);
-
+      LOG.info("In the proceedToLogin:  " + data);
       response = new JsonResponse<>(Status.OK, "", data);
       // if no exception, that's it, we're done!
 
@@ -276,29 +276,20 @@ public class LoginRestApi {
   @ZeppelinApi
   public Response postLogin(@FormParam("userName") String userName,
       @FormParam("password") String password) {
-    LOG.info("postLogin/ start");
-    LOG.info("userName: {}", userName);
+
     // ticket set to anonymous for anonymous user. Simplify testing.
     Subject currentUser = SecurityUtils.getSubject();
     if (currentUser.isAuthenticated()) {
-//      LOG.info("postLogin/ in already auth branch");
       currentUser.logout();
     }
-//    LOG.info("currentUser: {}", currentUser.getPrincipal());
     JsonResponse<Map<String, String>> response = null;
     if (!currentUser.isAuthenticated()) {
-//      LOG.info("postLogin/ in not auth branch");
-//
-//      LOG.info("postLogin/username: {}", userName);
-//      LOG.info("postLogin/password: {}", password);
-
       AuthenticationToken token = null;
       token = new UsernamePasswordToken(userName, password);
       response = proceedToLogin(currentUser, token);
     }
 
     if (response == null) {
-//      LOG.info("postLogin/ in response is null branch");
       response = new JsonResponse<>(Response.Status.FORBIDDEN, "", null);
     }
 

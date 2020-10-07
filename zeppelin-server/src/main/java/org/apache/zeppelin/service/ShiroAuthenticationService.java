@@ -204,7 +204,7 @@ public class ShiroAuthenticationService implements AuthenticationService {
                         rolesList.addAll(getRolesList((IniRealm) realm));
                     } else if (name.equals("org.apache.zeppelin.realm.LdapRealm")) {
                         rolesList.addAll(getRolesList((LdapRealm) realm));
-                    } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
+                    } else if (name.equals("org.apache.zeppelin.realm.cognito.CognitoRealm")) {
                         rolesList.addAll(getRolesList((CognitoRealm) realm));
                     }
                 }
@@ -229,6 +229,7 @@ public class ShiroAuthenticationService implements AuthenticationService {
 
         if (subject.isAuthenticated()) {
             Collection<Realm> realmsList = getRealmsList();
+            LOGGER.info("Try to get associated roles. User is also authenticated. Here are the realms: " + realmsList);
             for (Realm realm : realmsList) {
                 String name = realm.getClass().getName();
                 if (name.equals("org.apache.shiro.realm.text.IniRealm")) {
@@ -251,7 +252,7 @@ public class ShiroAuthenticationService implements AuthenticationService {
                 } else if (name.equals("org.apache.zeppelin.realm.ActiveDirectoryGroupRealm")) {
                     allRoles = ((ActiveDirectoryGroupRealm) realm).getListRoles();
                     break;
-                } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
+                } else if (name.equals("org.apache.zeppelin.realm.cognito.CognitoRealm")) {
                     allRoles = ((CognitoRealm) realm).getRolesList();
                     break;
                 }
@@ -320,7 +321,7 @@ public class ShiroAuthenticationService implements AuthenticationService {
                 roleList.add(pair.getKey().toString().trim());
             }
         }
-        LOGGER.info("ALL roles for Cognito Real: " + roleList);
+        LOGGER.debug("ALL roles for Cognito Real: " + roleList);
         return roleList;
     }
 
