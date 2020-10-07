@@ -25,7 +25,7 @@ zeppelin-server/src/main/resources/zeppelin-site.xml
 # conf file
 conf/zeppelin-env.sh
 conf/zeppelin-env.cmd
-conf/zeppelin-site.xml
+conf/zeppelin-site.xml.old
 conf/shiro.ini
 conf/keystore
 conf/truststore

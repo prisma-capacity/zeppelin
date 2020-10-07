@@ -47,10 +47,10 @@ public class CognitoJwtVerifierTest {
         cognitoUserPoolUrl = props.getProperty("forJwtVerifierTestPoolUrl");
         cognitoUserPoolClientId = props.getProperty("forJwtVerifierClientId");
         cognitoUserPoolId = props.getProperty("forJwtVerifierPoolId");
-        uut = new CognitoJwtVerifier();
-        uut.setCognitoUserPoolClientId(cognitoUserPoolClientId);
-        uut.setCognitoUserPoolUrl(cognitoUserPoolUrl);
-        uut.setCognitoUserPoolId(cognitoUserPoolId);
+        uut = new CognitoJwtVerifier(cognitoUserPoolClientId, cognitoUserPoolId);
+//        uut.setCognitoUserPoolClientId(cognitoUserPoolClientId);
+//        uut.setCognitoUserPoolUrl(cognitoUserPoolUrl);
+//        uut.setCognitoUserPoolId(cognitoUserPoolId);
     }
 
     @Rule

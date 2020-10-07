@@ -38,8 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -56,29 +55,30 @@ public class CognitoRealm extends AuthorizingRealm {
     private final HttpClient httpClient;
     private CognitoJwtVerifier cognitoJwtVerifier;
     private CognitoClientProvider cognitoClientProvider;
-    private AWSCognitoIdentityProvider cognito;
+//    private AWSCognitoIdentityProvider cognito;
     private final Map<String, String> roles = new HashMap<>();
-    private Ini ini;
+//    private Ini ini;
+//
+//    public Ini getIni() {
+//        return this.ini;
+//    }
+//
+//    public void setIni() {
+//        IniRealm iniRealm = new IniRealm("classpath:shiro.ini");
+//        this.ini = iniRealm.getIni();
+//    }
 
-    public Ini getIni() {
-        return this.ini;
-    }
-
-    public void setIni() {
-        IniRealm iniRealm = new IniRealm("classpath:shiro.ini");
-        this.ini = iniRealm.getIni();
-    }
-
-    public Map<String, String> getRoles() {
-        return this.roles;
-    }
-
-    public void setRoles() {
-        this.roles.putAll(this.ini.getSection("roles"));
-    }
+//    public Map<String, String> getRoles() {
+//        return this.roles;
+//    }
+//
+//    public void setRoles() {
+//        this.roles.putAll(this.ini.getSection("roles"));
+//    }
 
     public List<String> getRolesList() {
-        List<String> roles = new ArrayList<>();
+        List<String> roles = cognitoClientProvider.getCognitoGroups();
+        LOG.info("Roles: " + roles);
         for (Map.Entry<String, String> entry : this.roles.entrySet()) {
             roles.add(entry.getKey());
         }
@@ -87,16 +87,17 @@ public class CognitoRealm extends AuthorizingRealm {
 
     public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
         this.cognitoClientProvider = cognitoClientProvider;
-        if (cognitoClientProvider != null) {
-            this.cognito = this.cognitoClientProvider.getCognito();
-        }
+//        if (cognitoClientProvider != null) {
+//            this.cognito = this.cognitoClientProvider.getCognito();
+//        }
     }
 
-    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
-        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
-        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
-        this.cognitoJwtVerifier = cognitoJwtVerifier;
-    }
+//    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
+//        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
+//        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
+//        this.cognitoJwtVerifier = cognitoJwtVerifier;
+//
+//    }
 
 
     public CognitoRealm() throws MalformedURLException {
@@ -108,9 +109,10 @@ public class CognitoRealm extends AuthorizingRealm {
 
     @Override
     public void onInit() {
+        LOG.info("Init Cognito Realm");
         super.onInit();
-        setIni();
-        setRoles();
+        this.cognitoClientProvider = new CognitoClientProvider(userPoolClientId, userPoolId);
+        this.cognitoJwtVerifier = new CognitoJwtVerifier(userPoolClientId, userPoolId);
     }
 
     @Override
@@ -131,37 +133,31 @@ public class CognitoRealm extends AuthorizingRealm {
 
     @Override
     public AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
-        LOG.info("doGetAuthenticationInfo: " + token.toString());
-
-        System.out.println("This is in the doGetAuthenticationInfo");
         UsernamePasswordToken userInfo = (UsernamePasswordToken) token;
-        String username = userInfo.getUsername();
+        String userName = userInfo.getUsername();
         String password = String.valueOf(userInfo.getPassword());
-        if (username == null) {
+
+        if (userName == null) {
             throw new AuthenticationException("Username cannot be empty!");
         }
-        String hashedValue = SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, username);
+
         SimpleAuthenticationInfo authenticationInfo = null;
-        // AdminInitiateAuth
-        final Map<String, String> authParams = cognito.buildAuthRequest(username, password, hashedValue);
+
+        String hashedValue = SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, userName);
+
+        final Map<String, String> authParams = cognitoClientProvider.buildAuthRequest(userName, password, hashedValue);
         try {
-            AdminInitiateAuthResult authResponse = cognito.initiateAuthRequest(authParams);
-            // AdminRespondToAuthChallenge
+            AdminInitiateAuthResult authResponse = cognitoClientProvider.initiateAuth(authParams);
+
             String challengeName = authResponse.getChallengeName();
             boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
+
             if (!isChallengePresent) {
                 AuthenticationResultType authResult = authResponse.getAuthenticationResult();
-                String accessToken = authResult.getAccessToken();
+                LOG.info("ID Token: " + authResult.getIdToken());
+                authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
 
-                // parse and verify the jwt token
-                try{
-                    JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(accessToken);
-                }catch(Exception ex){
-                    LOG.info("Exception: " + ex.getMessage());
-                }
-            return new SimpleAuthenticationInfo(username, password, this.getName());
-//                authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
-//                return authenticationInfo;
+                return authenticationInfo;
             } else {
                 LOG.error("Unexpected Cognito Challenge.");
                 throw new AuthenticationException("Unexpected Cognito Challenge.");
@@ -178,9 +174,9 @@ public class CognitoRealm extends AuthorizingRealm {
             JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
             LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
 
-            CognitoUser cognitoUser = new CognitoUser();
-            cognitoUser.setUsername(idTokenClaims.getStringClaim("cognito:username"));
-            cognitoUser.setEmail(idTokenClaims.getStringClaim("email"));
+            CognitoUser cognitoUser = new CognitoUser(idTokenClaims.getStringClaim("cognito:username"),
+                    idTokenClaims.getStringClaim("email"));
+
 
             if (!idTokenClaims.getClaims().containsKey("cognito:groups")) {
                 cognitoUser.setRoles(Collections.singletonList("prisma"));
@@ -189,13 +185,13 @@ public class CognitoRealm extends AuthorizingRealm {
                 cognitoUser.setRoles(Arrays.asList(rolesFromToken));
             }
 
-                SecurityUtils.getSubject().getSession().setAttribute("cognitoUser", cognitoUser);
-
             authenticationInfo = new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
+
         } catch (Exception e) {
             LOG.info("Exception in normal auth: " + e.getMessage());
         }
-
+        return authenticationInfo;
+    }
 
     /**
      * Perform a Simple URL check by using {@code URI(url).toURL()}.

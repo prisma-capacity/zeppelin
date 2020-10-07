@@ -77,7 +77,6 @@ public class CognitoRealmTest {
         cognitoClientProvider = mock(CognitoClientProvider.class);
         cognito = mock(AWSCognitoIdentityProvider.class);
 
-        uut.setCognitoJwtVerifier(cognitoJwtVerifier);
         when(cognitoClientProvider.getCognito()).thenReturn(cognito);
         uut.onInit();
     }

@@ -17,6 +17,9 @@
 
 package org.apache.zeppelin.realm.cognito;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,10 +27,11 @@ public class CognitoUser {
     private String username;
     private String email;
     private List<String> roles = new ArrayList<>();
-
-    public CognitoUser(String username, String email, List<String> roles){
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
+    public CognitoUser(String username, String email){
         this.username = username;
         this.email = email;
+        LOG.info("Setting up a user: " + username + " " + email);
     }
 
     public List<String> getRoles() {
@@ -42,28 +46,20 @@ public class CognitoUser {
         }
     }
 
-//    public String getUsername() {
-//        return username;
-//    }
+    public String getUsername() {
+        return username;
+    }
 //
 //    public void setUsername(String username) {
 //        this.username = username;
 //    }
 //
-//    public String getEmail() {
-//        return email;
-//    }
+    public String getEmail() {
+        return email;
+    }
 //
 //    public void setEmail(String email) {
 //        this.email = email;
-//    }
-//
-//    public List<String> getRoles() {
-//        return roles;
-//    }
-//
-//    public void setRoles(List<String> roles) {
-//        this.roles = roles;
 //    }
 
     @Override

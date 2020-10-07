@@ -160,25 +160,19 @@ public class LoginRestApi {
       if(status == HttpStatus.SC_OK){
         String postResponse = post.getResponseBodyAsString();
         CognitoToken token = CognitoToken.fromJson(postResponse);
-        CognitoJwtVerifier cognitoJwtVerifier = new CognitoJwtVerifier();
-        cognitoJwtVerifier.setCognitoUserPoolUrl("https://cognito-idp.eu-central-1.amazonaws.com/" + userPoolId);
-        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
-        JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(token.id_token);
-        String username = (String) claims.getClaim("cognito:username");
-        PrincipalCollection principals = new SimplePrincipalCollection(username, "CognitoRealm");
-        Subject subject = new Subject.Builder().principals(principals).buildSubject();
-        response = proceedToLogin(subject, token);
+//        CognitoJwtVerifier cognitoJwtVerifier = new CognitoJwtVerifier();
+//        cognitoJwtVerifier.setCognitoUserPoolUrl("https://cognito-idp.eu-central-1.amazonaws.com/" + userPoolId);
+//        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
+//        JWTClaimsSet claims = cognitoJwtVerifier.verifyJwt(token.id_token);
+//        String username = (String) claims.getClaim("cognito:username");
+//        PrincipalCollection principals = new SimplePrincipalCollection(username, "CognitoRealm");
+//        Subject subject = new Subject.Builder().principals(principals).buildSubject();
+//        response = proceedToLogin(subject, token);
         return response.build();
       }
     } catch (HttpException e) {
       e.printStackTrace();
     } catch (IOException e) {
-      e.printStackTrace();
-    } catch (ParseException e) {
-      e.printStackTrace();
-    } catch (JOSEException e) {
-      e.printStackTrace();
-    } catch (BadJOSEException e) {
       e.printStackTrace();
     }
     return new JsonResponse<>(Status.METHOD_NOT_ALLOWED).build();
