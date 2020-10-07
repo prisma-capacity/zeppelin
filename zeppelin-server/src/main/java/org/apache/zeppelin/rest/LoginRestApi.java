@@ -84,6 +84,7 @@ public class LoginRestApi {
     this.authorizationService = authorizationService;
   }
 
+  // TODO CHECK IF THIS VERSION IS NEEDED OR REVERT
   @GET
   @ZeppelinApi
   public Response getLogin(@Context HttpHeaders headers, @QueryParam("code") String code) {
@@ -139,6 +140,7 @@ public class LoginRestApi {
     return new JsonResponse<>(Status.METHOD_NOT_ALLOWED).build();
   }
 
+  // TODO CHECK IF NEEDED
   private Response loginWithCognito(String code, CognitoRealm cognitoRealm){
     JsonResponse<Map<String, String>> response = null;
     cognitoRealm.onInit();
@@ -206,6 +208,7 @@ public class LoginRestApi {
     return null;
   }
 
+  // TODO CHECK IF NEEDED
   private CognitoRealm getCognitoRealm() {
     Collection<Realm> realmsList = authenticationService.getRealmsList();
     if (realmsList != null) {
@@ -278,16 +281,16 @@ public class LoginRestApi {
     // ticket set to anonymous for anonymous user. Simplify testing.
     Subject currentUser = SecurityUtils.getSubject();
     if (currentUser.isAuthenticated()) {
-      LOG.info("postLogin/ in already auth branch");
+//      LOG.info("postLogin/ in already auth branch");
       currentUser.logout();
     }
-    LOG.info("currentUser: {}", currentUser.getPrincipal());
+//    LOG.info("currentUser: {}", currentUser.getPrincipal());
     JsonResponse<Map<String, String>> response = null;
     if (!currentUser.isAuthenticated()) {
-      LOG.info("postLogin/ in not auth branch");
-
-      LOG.info("postLogin/username: {}", userName);
-      LOG.info("postLogin/password: {}", password);
+//      LOG.info("postLogin/ in not auth branch");
+//
+//      LOG.info("postLogin/username: {}", userName);
+//      LOG.info("postLogin/password: {}", password);
 
       AuthenticationToken token = null;
       token = new UsernamePasswordToken(userName, password);
@@ -295,7 +298,7 @@ public class LoginRestApi {
     }
 
     if (response == null) {
-      LOG.info("postLogin/ in response is null branch");
+//      LOG.info("postLogin/ in response is null branch");
       response = new JsonResponse<>(Response.Status.FORBIDDEN, "", null);
     }
 

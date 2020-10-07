@@ -251,6 +251,9 @@ public class ShiroAuthenticationService implements AuthenticationService {
                 } else if (name.equals("org.apache.zeppelin.realm.ActiveDirectoryGroupRealm")) {
                     allRoles = ((ActiveDirectoryGroupRealm) realm).getListRoles();
                     break;
+                } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
+                    allRoles = ((CognitoRealm) realm).getRolesList();
+                    break;
                 }
             }
             if (allRoles != null) {
@@ -301,15 +304,24 @@ public class ShiroAuthenticationService implements AuthenticationService {
         return roleList;
     }
 
-
-    //  /**
-//   * * Get user roles from shiro.ini for CognitoRealm.
-//   *
-//   * @param r
-//   * @return
-//   */
+    /**
+   * * Get user roles from shiro.ini for CognitoRealm.
+   *
+   * @param r
+   * @return List of roles
+   */
     private List<String> getRolesList(CognitoRealm r) {
-        return r.getRolesList();
+        List<String> roleList = new ArrayList<>();
+        Map cognitoRoles = r.getRolesList();
+        if (cognitoRoles != null) {
+            Iterator it = cognitoRoles.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                roleList.add(pair.getKey().toString().trim());
+            }
+        }
+        LOGGER.info("ALL roles for Cognito Real: " + roleList);
+        return roleList;
     }
 
     /**
