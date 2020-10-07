@@ -251,6 +251,9 @@ public class ShiroAuthenticationService implements AuthenticationService {
                 } else if (name.equals("org.apache.zeppelin.realm.ActiveDirectoryGroupRealm")) {
                     allRoles = ((ActiveDirectoryGroupRealm) realm).getListRoles();
                     break;
+                } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
+                    allRoles = ((CognitoRealm) realm).getRoles();
+                    break;
                 }
             }
             if (allRoles != null) {

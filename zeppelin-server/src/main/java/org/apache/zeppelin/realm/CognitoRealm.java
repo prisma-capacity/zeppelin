@@ -110,15 +110,15 @@ public class CognitoRealm extends AuthorizingRealm {
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        String stringPrincipals = principals.toString();
-        LOG.info("doGetAuthorizationInfo: " + stringPrincipals);
+//        String stringPrincipals = principals.toString();
+//        LOG.info("doGetAuthorizationInfo: " + stringPrincipals);
 
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
         CognitoUser user = (CognitoUser) principals.getPrimaryPrincipal();
 
-        LOG.info("USER EMAIL: " + user.getEmail());
-        LOG.info("USERNAME: " + user.getUsername());
-        LOG.info("ROLES: " + user.getRoles());
+//        LOG.info("USER EMAIL: " + user.getEmail());
+//        LOG.info("USERNAME: " + user.getUsername());
+//        LOG.info("ROLES: " + user.getRoles());
 
         authorizationInfo.addRoles(user.getRoles());
         return authorizationInfo;
@@ -164,7 +164,7 @@ public class CognitoRealm extends AuthorizingRealm {
         SimpleAuthenticationInfo authenticationInfo = null;
         try {
             JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
-            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
+//            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
 
             CognitoUser cognitoUser = new CognitoUser();
             cognitoUser.setUsername(idTokenClaims.getStringClaim("cognito:username"));

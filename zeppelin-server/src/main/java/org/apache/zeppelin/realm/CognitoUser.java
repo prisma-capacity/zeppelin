@@ -17,6 +17,9 @@
 
 package org.apache.zeppelin.realm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +27,8 @@ public class CognitoUser {
     private String username;
     private String email;
     private List<String> roles = new ArrayList<>();
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoUser.class);
+
 
     public String getUsername() {
         return username;
