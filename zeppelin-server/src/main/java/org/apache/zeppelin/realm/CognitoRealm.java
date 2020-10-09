@@ -134,7 +134,7 @@ public class CognitoRealm extends AuthorizingRealm {
             throw new AuthenticationException("Username cannot be empty!");
         }
 
-        SimpleAuthenticationInfo authenticationInfo = null;
+        SimpleAuthenticationInfo authenticationInfo;
 
         String hashedValue = SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, userName);
 
@@ -161,7 +161,7 @@ public class CognitoRealm extends AuthorizingRealm {
     }
 
     private SimpleAuthenticationInfo buildCognitoAuthenticationInfo(String password, String idToken) {
-        SimpleAuthenticationInfo authenticationInfo = null;
+//        SimpleAuthenticationInfo authenticationInfo = null;
         try {
             JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
 //            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
@@ -179,11 +179,11 @@ public class CognitoRealm extends AuthorizingRealm {
 
             SecurityUtils.getSubject().getSession().setAttribute("cognitoUser", cognitoUser);
 
-            authenticationInfo = new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
+            return new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
         } catch (Exception e) {
             LOG.info("Exception in normal auth: " + e.getMessage());
         }
-        return authenticationInfo;
+       return null;
     }
 
     private Map<String, String> buildAuthRequest(String username, String password, String hashedValue) {

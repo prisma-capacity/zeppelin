@@ -25,26 +25,35 @@ import com.amazonaws.services.cognitoidp.model.UserNotFoundException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
+import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.Subject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
-import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(fullyQualifiedNames = {"org.apache.shiro.SecurityUtils", "org.apache.zeppelin.realm.SecretHashCalculator"})
 
 public class CognitoRealmTest {
     private static final Logger LOG = LoggerFactory.getLogger(CognitoRealmTest.class);
@@ -77,6 +86,18 @@ public class CognitoRealmTest {
         uut.setCognitoJwtVerifier(cognitoJwtVerifier);
         when(cognitoClientProvider.getCognito()).thenReturn(cognito);
         uut.setCognitoClientProvider(cognitoClientProvider);
+
+        PowerMockito.mockStatic(SecretHashCalculator.class);
+        when(SecretHashCalculator.calculate(anyString(), anyString(), anyString())).thenReturn("SecretHashCalculatedValue$123");
+
+
+        PowerMockito.mockStatic(SecurityUtils.class);
+        Subject subject = mock(Subject.class);
+        PowerMockito.when(SecurityUtils.getSubject()).thenReturn(subject);
+        Session session = mock(Session.class);
+        when(subject.getSession()).thenReturn(session);
+        doNothing().when(session).setAttribute(anyString(), any());
+
     }
 
     @Test
@@ -97,7 +118,15 @@ public class CognitoRealmTest {
         when(adminInitiateAuthResult.getAuthenticationResult()).thenReturn(authResult);
         when(authResult.getIdToken()).thenReturn(validToken);
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder().claim("cognito:username", username).build();
+        List<String> cognitoGroups = new ArrayList<>();
+        cognitoGroups.add("undergraduate");
+        cognitoGroups.add("regular-user");
+
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .claim("cognito:username", username)
+                .claim("email", "test-email@email.com")
+                .claim("cognito:groups", cognitoGroups)
+                .build();
         when(cognitoJwtVerifier.verifyJwt(any())).thenReturn(jwtClaimsSet);
 
         AuthenticationInfo authenticationInfo = uut.doGetAuthenticationInfo(usernamePasswordToken);
@@ -126,6 +155,4 @@ public class CognitoRealmTest {
             assertEquals(UserNotFoundException.class, e.getCause().getClass());
         }
     }
-
-
 }
