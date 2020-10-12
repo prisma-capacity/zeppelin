@@ -58,7 +58,6 @@
       "text": "import org.apache.commons.io.IOUtils\nimport java.net.URL\nimport java.nio.charset.Charset\n\n// Zeppelin creates and injects sc (SparkContext) and sqlContext (HiveContext or SqlContext)\n// So you don\u0027t need create them manually\n\n// load bank data\nval bankText \u003d sc.parallelize(\n    IOUtils.toString(\n        new URL(\"https://s3.amazonaws.com/apache-zeppelin/tutorial/bank/bank.csv\"),\n        Charset.forName(\"utf8\")).split(\"\\n\"))\n\ncase class Bank(age: Integer, job: String, marital: String, education: String, balance: Integer)\n\nval bank \u003d bankText.map(s \u003d\u003e s.split(\";\")).filter(s \u003d\u003e s(0) !\u003d \"\\\"age\\\"\").map(\n    s \u003d\u003e Bank(s(0).toInt, \n            s(1).replaceAll(\"\\\"\", \"\"),\n            s(2).replaceAll(\"\\\"\", \"\"),\n            s(3).replaceAll(\"\\\"\", \"\"),\n            s(5).replaceAll(\"\\\"\", \"\").toInt\n        )\n).toDF()\nbank.registerTempTable(\"bank\")",
       "user": "anonymous",
       "dateUpdated": "2020-05-08 11:18:36.766",
-      "progress": 0,
       "config": {
         "colWidth": 12.0,
         "title": true,
@@ -108,7 +107,10 @@
       "text": "%sql \nselect age, count(1) value\nfrom bank \nwhere age \u003c 30 \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:43.954",
+<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
       "progress": 0,
+=======
+>>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [
@@ -182,7 +184,10 @@
       "text": "%sql \nselect age, count(1) value \nfrom bank \nwhere age \u003c ${maxAge\u003d30} \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:45.514",
+<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
       "progress": 0,
+=======
+>>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [
@@ -256,7 +261,10 @@
       "text": "%sql \nselect age, count(1) value \nfrom bank \nwhere marital\u003d\"${marital\u003dsingle,single|divorced|married}\" \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:47.079",
+<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
       "progress": 0,
+=======
+>>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [

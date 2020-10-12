@@ -16,9 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
-import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
 import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
 import com.amazonaws.services.cognitoidp.model.UserNotFoundException;
@@ -31,6 +30,7 @@ import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.Subject;
+import org.apache.zeppelin.realm.PropertiesHelper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,26 +45,23 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(fullyQualifiedNames = {"org.apache.shiro.SecurityUtils", "org.apache.zeppelin.realm.SecretHashCalculator"})
-
 public class CognitoRealmTest {
     private static final Logger LOG = LoggerFactory.getLogger(CognitoRealmTest.class);
 
     CognitoRealm uut;
     String username;
     String password;
-    AWSCognitoIdentityProvider cognito;
+//    AWSCognitoIdentityProvider cognito;
 
     CognitoJwtVerifier cognitoJwtVerifier;
-    CognitoClientProvider cognitoClientProvider;
+    CognitoClient cognitoClient;
 
     @Before
     public void setup() throws IOException {
@@ -80,16 +77,16 @@ public class CognitoRealmTest {
         uut.setUserPoolClientSecret(props.getProperty("userPoolClientSecret"));
 
         cognitoJwtVerifier = mock(CognitoJwtVerifier.class);
-        cognitoClientProvider = mock(CognitoClientProvider.class);
-        cognito = mock(AWSCognitoIdentityProvider.class);
+        cognitoClient = mock(CognitoClient.class);
+//        cognito = mock(AWSCognitoIdentityProvider.class);
 
-        uut.setCognitoJwtVerifier(cognitoJwtVerifier);
-        when(cognitoClientProvider.getCognito()).thenReturn(cognito);
-        uut.setCognitoClientProvider(cognitoClientProvider);
+        //uut.setCognitoJwtVerifier(cognitoJwtVerifier);
+//        when(cognitoClient.getCognito()).thenReturn(cognito);
+//        uut.setCognitoClientProvider(cognitoClient);
+//        uut.onInit();
 
         PowerMockito.mockStatic(SecretHashCalculator.class);
         when(SecretHashCalculator.calculate(anyString(), anyString(), anyString())).thenReturn("SecretHashCalculatedValue$123");
-
 
         PowerMockito.mockStatic(SecurityUtils.class);
         Subject subject = mock(Subject.class);
@@ -108,9 +105,11 @@ public class CognitoRealmTest {
         usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
 
+        Map<String, String> authParams = new HashMap<>();
         AdminInitiateAuthResult adminInitiateAuthResult = mock(AdminInitiateAuthResult.class);
 
-        when(cognito.adminInitiateAuth(any())).thenReturn(adminInitiateAuthResult);
+        when(cognitoClient.buildAuthRequest(anyString(), anyString(), anyString())).thenReturn(authParams);
+        when(cognitoClient.initiateAuth(any())).thenReturn(adminInitiateAuthResult);
         when(adminInitiateAuthResult.getChallengeName()).thenReturn(null);
 
         AuthenticationResultType authResult = mock(AuthenticationResultType.class);
@@ -145,7 +144,7 @@ public class CognitoRealmTest {
         usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
 
-        when(cognito.adminInitiateAuth(any())).thenThrow(new UserNotFoundException("Cognito could not find the user"));
+        when(cognitoClient.initiateAuth(any())).thenThrow(new UserNotFoundException("Cognito could not find the user"));
 
         try {
             uut.doGetAuthenticationInfo(usernamePasswordToken);

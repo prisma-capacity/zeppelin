@@ -14,13 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
 
-import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
-import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthRequest;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
-import com.amazonaws.services.cognitoidp.model.AuthFlowType;
 import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.lang3.StringUtils;
@@ -28,13 +25,11 @@ import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
-import org.apache.shiro.config.Ini;
 import org.apache.shiro.realm.AuthorizingRealm;
-import org.apache.shiro.realm.text.IniRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.net.MalformedURLException;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,79 +41,60 @@ public class CognitoRealm extends AuthorizingRealm {
     private String userPoolId;
     private String userPoolUrl;
     private String userPoolClientId;
-
     private String userPoolClientSecret;
-    private String name;
+    private final String name;
     private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+    private CognitoClient cognitoClient;
     private CognitoJwtVerifier cognitoJwtVerifier;
-    private CognitoClientProvider cognitoClientProvider;
-    private AWSCognitoIdentityProvider cognito;
     private final Map<String, String> roles = new HashMap<>();
-    private Ini ini;
 
-    public Ini getIni() {
-        return this.ini;
-    }
-
-    public void setIni() {
-        IniRealm iniRealm = new IniRealm("classpath:shiro.ini");
-        this.ini = iniRealm.getIni();
-    }
-
-    public Map<String, String> getRoles() {
-        return this.roles;
-    }
-
-    public void setRoles() {
-        this.roles.putAll(this.ini.getSection("roles"));
-    }
-
-    public List<String> getRolesList() {
-        List<String> roles = new ArrayList<>();
-        for (Map.Entry<String, String> entry : this.roles.entrySet()) {
-            roles.add(entry.getKey());
-        }
-        return roles;
-    }
-
-    public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
-        this.cognitoClientProvider = cognitoClientProvider;
-        if (cognitoClientProvider != null) {
-            this.cognito = this.cognitoClientProvider.getCognito();
-        }
-    }
-
-    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
-        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
-        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
-        cognitoJwtVerifier.setCognitoUserPoolId(userPoolId);
-        this.cognitoJwtVerifier = cognitoJwtVerifier;
-    }
-
-    public CognitoRealm() throws MalformedURLException {
+    public CognitoRealm() {
         super();
-        LOG.info("Initializing CognitoRealm");
+        LOG.info("Init CognitoRealm");
         this.name = getClass().getName() + "_" + INSTANCE_COUNT.getAndIncrement();
     }
 
     @Override
     public void onInit() {
         super.onInit();
-        setIni();
-        setRoles();
+        this.cognitoClient = new CognitoClient(userPoolClientId, userPoolId, new CognitoClientProvider());
+        this.cognitoJwtVerifier = new CognitoJwtVerifier(userPoolClientId, userPoolId);
     }
+
+    public Map<String, String> getRolesList() {
+        List<String> cognitoGroups = cognitoClient.getCognitoGroups();
+        Map<String, String> roles = new HashMap<>();
+        for (String entry : cognitoGroups) {
+            roles.put(entry, "*");
+        }
+        return roles;
+    }
+
+//    public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
+//        this.cognitoClientProvider = cognitoClientProvider;
+//    }
+
+//    public void setCognitoClientProvider(CognitoClientProvider cognitoClientProvider) {
+//        this.cognitoClientProvider = cognitoClientProvider;
+//        if (cognitoClientProvider != null) {
+//            this.cognito = this.cognitoClientProvider.getCognito();
+//        }
+//    }
+//
+//    public void setCognitoJwtVerifier(CognitoJwtVerifier cognitoJwtVerifier) {
+//        cognitoJwtVerifier.setCognitoUserPoolUrl(userPoolUrl);
+//        cognitoJwtVerifier.setCognitoUserPoolClientId(userPoolClientId);
+//        cognitoJwtVerifier.setCognitoUserPoolId(userPoolId);
+//        this.cognitoJwtVerifier = cognitoJwtVerifier;
+//    }
+
+
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-//        String stringPrincipals = principals.toString();
-//        LOG.info("doGetAuthorizationInfo: " + stringPrincipals);
 
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
         CognitoUser user = (CognitoUser) principals.getPrimaryPrincipal();
-
-//        LOG.info("USER EMAIL: " + user.getEmail());
-//        LOG.info("USERNAME: " + user.getUsername());
-//        LOG.info("ROLES: " + user.getRoles());
 
         authorizationInfo.addRoles(user.getRoles());
         return authorizationInfo;
@@ -138,9 +114,9 @@ public class CognitoRealm extends AuthorizingRealm {
 
         String hashedValue = SecretHashCalculator.calculate(userPoolClientId, userPoolClientSecret, userName);
 
-        final Map<String, String> authParams = buildAuthRequest(userName, password, hashedValue);
+        final Map<String, String> authParams = cognitoClient.buildAuthRequest(userName, password, hashedValue);
         try {
-            AdminInitiateAuthResult authResponse = initiateAuth(authParams);
+            AdminInitiateAuthResult authResponse = cognitoClient.initiateAuth(authParams);
 
             String challengeName = authResponse.getChallengeName();
             boolean isChallengePresent = StringUtils.isNotBlank(challengeName);
@@ -161,14 +137,13 @@ public class CognitoRealm extends AuthorizingRealm {
     }
 
     private SimpleAuthenticationInfo buildCognitoAuthenticationInfo(String password, String idToken) {
-//        SimpleAuthenticationInfo authenticationInfo = null;
+        SimpleAuthenticationInfo authenticationInfo = null;
         try {
             JWTClaimsSet idTokenClaims = cognitoJwtVerifier.verifyJwt(idToken);
 //            LOG.info("TOKEN CLAIMS: " + idTokenClaims.getClaims());
 
-            CognitoUser cognitoUser = new CognitoUser();
-            cognitoUser.setUsername(idTokenClaims.getStringClaim("cognito:username"));
-            cognitoUser.setEmail(idTokenClaims.getStringClaim("email"));
+            CognitoUser cognitoUser = new CognitoUser(idTokenClaims.getStringClaim("cognito:username"),
+                    idTokenClaims.getStringClaim("email"));
 
             if (!idTokenClaims.getClaims().containsKey("cognito:groups")) {
                 cognitoUser.setRoles(Collections.singletonList("prisma"));
@@ -179,29 +154,29 @@ public class CognitoRealm extends AuthorizingRealm {
 
             SecurityUtils.getSubject().getSession().setAttribute("cognitoUser", cognitoUser);
 
-            return new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
+            authenticationInfo = new SimpleAuthenticationInfo(cognitoUser, password, this.getName());
         } catch (Exception e) {
             LOG.info("Exception in normal auth: " + e.getMessage());
         }
-       return null;
+        return authenticationInfo;
     }
 
-    private Map<String, String> buildAuthRequest(String username, String password, String hashedValue) {
-        final Map<String, String> authParams = new HashMap<>();
-        authParams.put("USERNAME", username);
-        authParams.put("PASSWORD", password);
-        authParams.put("SECRET_HASH", hashedValue);
-        return authParams;
-    }
+//    private Map<String, String> buildAuthRequest(String username, String password, String hashedValue) {
+//        final Map<String, String> authParams = new HashMap<>();
+//        authParams.put("USERNAME", username);
+//        authParams.put("PASSWORD", password);
+//        authParams.put("SECRET_HASH", hashedValue);
+//        return authParams;
+//    }
 
-    private AdminInitiateAuthResult initiateAuth(Map<String, String> authParams) {
-        final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
-        authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
-                .withClientId(userPoolClientId)
-                .withUserPoolId(userPoolId)
-                .withAuthParameters(authParams);
-        return cognito.adminInitiateAuth(authRequest);
-    }
+//    private AdminInitiateAuthResult initiateAuth(Map<String, String> authParams) {
+//        final AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest();
+//        authRequest.withAuthFlow(AuthFlowType.ADMIN_USER_PASSWORD_AUTH)
+//                .withClientId(userPoolClientId)
+//                .withUserPoolId(userPoolId)
+//                .withAuthParameters(authParams);
+//        return cognito.adminInitiateAuth(authRequest);
+//    }
 
     public void setUserPoolId(String userPoolId) {
         this.userPoolId = userPoolId;

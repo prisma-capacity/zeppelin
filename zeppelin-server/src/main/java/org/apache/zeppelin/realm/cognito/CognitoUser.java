@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,22 +27,10 @@ public class CognitoUser {
     private String username;
     private String email;
     private List<String> roles = new ArrayList<>();
-    private static final Logger LOG = LoggerFactory.getLogger(CognitoUser.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifier.class);
 
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
+    public CognitoUser(String username, String email){
         this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
         this.email = email;
     }
 
@@ -56,6 +44,14 @@ public class CognitoUser {
         } else {
             this.roles = roles;
         }
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     @Override

@@ -17,27 +17,6 @@
 package org.apache.zeppelin.service;
 
 import com.google.common.collect.Lists;
-
-import java.security.Principal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.inject.Inject;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
-import javax.naming.ldap.LdapContext;
-import javax.sql.DataSource;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.shiro.UnavailableSecurityManagerException;
@@ -54,10 +33,24 @@ import org.apache.shiro.util.ThreadContext;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.realm.ActiveDirectoryGroupRealm;
-import org.apache.zeppelin.realm.CognitoRealm;
 import org.apache.zeppelin.realm.LdapRealm;
+import org.apache.zeppelin.realm.cognito.CognitoRealm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapContext;
+import javax.sql.DataSource;
+import java.security.Principal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
 
 /**
  * AuthenticationService which use Apache Shiro.
@@ -204,7 +197,7 @@ public class ShiroAuthenticationService implements AuthenticationService {
                         rolesList.addAll(getRolesList((IniRealm) realm));
                     } else if (name.equals("org.apache.zeppelin.realm.LdapRealm")) {
                         rolesList.addAll(getRolesList((LdapRealm) realm));
-                    } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
+                    } else if (name.equals("org.apache.zeppelin.realm.cognito.CognitoRealm")) {
                         rolesList.addAll(getRolesList((CognitoRealm) realm));
                     }
                 }
@@ -251,8 +244,8 @@ public class ShiroAuthenticationService implements AuthenticationService {
                 } else if (name.equals("org.apache.zeppelin.realm.ActiveDirectoryGroupRealm")) {
                     allRoles = ((ActiveDirectoryGroupRealm) realm).getListRoles();
                     break;
-                } else if (name.equals("org.apache.zeppelin.realm.CognitoRealm")) {
-                    allRoles = ((CognitoRealm) realm).getRoles();
+                } else if (name.equals("org.apache.zeppelin.realm.cognito.CognitoRealm")) {
+                    allRoles = ((CognitoRealm) realm).getRolesList();
                     break;
                 }
             }
@@ -304,15 +297,24 @@ public class ShiroAuthenticationService implements AuthenticationService {
         return roleList;
     }
 
-
-    //  /**
-//   * * Get user roles from shiro.ini for CognitoRealm.
-//   *
-//   * @param r
-//   * @return
-//   */
+    /**
+   * * Get user roles from shiro.ini for CognitoRealm.
+   *
+   * @param r
+   * @return List of roles
+   */
     private List<String> getRolesList(CognitoRealm r) {
-        return r.getRolesList();
+        List<String> roleList = new ArrayList<>();
+        Map cognitoRoles = r.getRolesList();
+        if (cognitoRoles != null) {
+            Iterator it = cognitoRoles.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                roleList.add(pair.getKey().toString().trim());
+            }
+        }
+        LOGGER.debug("ALL roles for Cognito Real: " + roleList);
+        return roleList;
     }
 
     /**
