@@ -23,6 +23,15 @@ public class CognitoUser {
     private String username;
     private String email;
     private List<String> roles;
+    private boolean requiresMfa;
+
+    public boolean isRequiresMfa() {
+        return requiresMfa;
+    }
+
+    public void setRequiresMfa(boolean requiresMfa) {
+        this.requiresMfa = requiresMfa;
+    }
 
     public String getUsername() {
         return username;

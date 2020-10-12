@@ -23,17 +23,17 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.*;
-import org.apache.shiro.authc.pam.UnsupportedTokenException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -120,7 +120,9 @@ public class CognitoRealm extends AuthorizingRealm {
             if (!isChallengePresent) {
                 AuthenticationResultType authResult = authResponse.getAuthenticationResult();
                 authenticationInfo = buildCognitoAuthenticationInfo(password, authResult.getIdToken());
-
+                return authenticationInfo;
+            } else if (isChallengePresent && challengeName.equals(ChallengeNameType.SOFTWARE_TOKEN_MFA)) {
+                LOG.info("CHALLENGE IS: " + challengeName);
                 return authenticationInfo;
             } else {
                 LOG.info("Unexpected Cognito Challenge.");
