@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.proc.BadJOSEException;
-import org.apache.zeppelin.realm.cognito.CognitoJwtVerifier;
+import org.apache.zeppelin.realm.PropertiesHelper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -36,21 +36,14 @@ import java.util.Properties;
 public class CognitoJwtVerifierTest {
     private static final Logger LOG = LoggerFactory.getLogger(CognitoJwtVerifierTest.class);
 
-    CognitoJwtVerifier uut;
-    String cognitoUserPoolUrl;
-    String cognitoUserPoolClientId;
-    private String cognitoUserPoolId;
+    private CognitoJwtVerifier uut;
 
     @Before
     public void setup() throws IOException {
         Properties props = PropertiesHelper.getProperties(CognitoJwtVerifier.class);
-        cognitoUserPoolUrl = props.getProperty("forJwtVerifierTestPoolUrl");
-        cognitoUserPoolClientId = props.getProperty("forJwtVerifierClientId");
-        cognitoUserPoolId = props.getProperty("forJwtVerifierPoolId");
+        String cognitoUserPoolClientId = props.getProperty("forJwtVerifierClientId");
+        String cognitoUserPoolId = props.getProperty("forJwtVerifierPoolId");
         uut = new CognitoJwtVerifier(cognitoUserPoolClientId, cognitoUserPoolId);
-//        uut.setCognitoUserPoolClientId(cognitoUserPoolClientId);
-//        uut.setCognitoUserPoolUrl(cognitoUserPoolUrl);
-//        uut.setCognitoUserPoolId(cognitoUserPoolId);
     }
 
     @Rule

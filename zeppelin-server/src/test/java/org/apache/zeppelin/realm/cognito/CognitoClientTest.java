@@ -17,8 +17,8 @@
 package org.apache.zeppelin.realm.cognito;
 
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
-import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
 import com.amazonaws.services.cognitoidp.model.GroupType;
+import com.amazonaws.services.cognitoidp.model.ListGroupsResult;
 import org.apache.zeppelin.realm.PropertiesHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,43 +30,41 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
-public class CognitoClientProviderTest {
+public class CognitoClientTest {
 
-    CognitoClientProvider cognitoClientProvider;
-    AWSCognitoIdentityProvider cognito;
-    private static final Logger LOG = LoggerFactory.getLogger(CognitoClientProviderTest.class);
+    private CognitoClient uut;
+    private AWSCognitoIdentityProvider cognito;
+    private static final Logger LOG = LoggerFactory.getLogger(CognitoClientTest.class);
 
     @Before
     public void setup() throws IOException {
         Properties props = PropertiesHelper.getProperties(CognitoRealm.class);
         String userPoolId = props.getProperty("userPoolId");
         String userPoolClientId = props.getProperty("userPoolClientId");
+        CognitoClientProvider clientProvider = mock(CognitoClientProvider.class);
         cognito = mock(AWSCognitoIdentityProvider.class);
+        when(clientProvider.getCognito()).thenReturn(cognito);
 
-        AWSCognitoIdentityProviderClientBuilder awsIdpClientBuilder = mock(AWSCognitoIdentityProviderClientBuilder.class);
-//        PowerMockito.when(AWSCognitoIdentityProviderClientBuilder.standard()).thenReturn(awsIdpClientBuilder);
-//        PowerMockito.when(AWSCognitoIdentityProviderClientBuilder.standard().withRegion(anyString())).thenReturn(awsIdpClientBuilder);
-//        PowerMockito.when(AWSCognitoIdentityProviderClientBuilder.standard().withRegion(anyString()).build()).thenReturn(cognito);
-        when(awsIdpClientBuilder.standard().build()).thenReturn(cognito);
-        cognitoClientProvider = new CognitoClientProvider(userPoolClientId, userPoolId);
-
-        List<GroupType> mockedGroups = new ArrayList<>();
-        GroupType admin = new GroupType();
-        admin.setGroupName("test");
-        mockedGroups.add(admin);
-        when(cognito.listGroups(any()).getGroups()).thenReturn(mockedGroups);
+        uut = new CognitoClient(userPoolClientId, userPoolId, clientProvider);
     }
 
     @Test
     public void testGetCognitoGroups() {
-        List<String> groups = cognitoClientProvider.getCognitoGroups();
-        List<String> resultGroups = new ArrayList<>();
-        resultGroups.add("test");
-        assertEquals(groups, resultGroups);
+        List<GroupType> mockedGroups = new ArrayList<>();
+        GroupType admin = new GroupType();
+        String expectedGroupName = "test";
+        admin.setGroupName(expectedGroupName);
+        mockedGroups.add(admin);
+
+        ListGroupsResult listGroupsResult = mock(ListGroupsResult.class);
+        when(cognito.listGroups(any())).thenReturn(listGroupsResult);
+        when(listGroupsResult.getGroups()).thenReturn(mockedGroups);
+
+        List<String> groups = uut.getCognitoGroups();
+
+        assertTrue(groups.contains(expectedGroupName));
     }
 }

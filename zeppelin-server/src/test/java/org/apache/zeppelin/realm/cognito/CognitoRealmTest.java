@@ -16,9 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.zeppelin.realm;
+package org.apache.zeppelin.realm.cognito;
 
-import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
 import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
 import com.amazonaws.services.cognitoidp.model.UserNotFoundException;
@@ -49,9 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -64,37 +61,33 @@ public class CognitoRealmTest {
     CognitoRealm uut;
     String username;
     String password;
-    AWSCognitoIdentityProvider cognito;
+//    AWSCognitoIdentityProvider cognito;
 
     CognitoJwtVerifier cognitoJwtVerifier;
-    CognitoClientProvider cognitoClientProvider;
+    CognitoClient cognitoClient;
 
     @Before
     public void setup() throws IOException {
         Properties props = PropertiesHelper.getProperties(CognitoRealm.class);
         username = props.getProperty("username");
         password = props.getProperty("password");
-        String userPoolId = props.getProperty("userPoolId");
-        String userPoolClientId = props.getProperty("userPoolClientId");
-        String userPoolUrl = props.getProperty("userPoolUrl");
-        String userPoolClientSecret = props.getProperty("userPoolClientSecret");
+
         uut = new CognitoRealm();
 
-        uut.setUserPoolId(userPoolId);
-        uut.setUserPoolClientId(userPoolClientId);
-        uut.setUserPoolUrl(userPoolUrl);
-        uut.setUserPoolClientSecret(userPoolClientSecret);
+        uut.setUserPoolId(props.getProperty("userPoolId"));
+        uut.setUserPoolClientId(props.getProperty("userPoolClientId"));
+        uut.setUserPoolUrl(props.getProperty("userPoolUrl"));
+        uut.setUserPoolClientSecret(props.getProperty("userPoolClientSecret"));
 
         cognitoJwtVerifier = mock(CognitoJwtVerifier.class);
-        cognitoClientProvider = mock(CognitoClientProvider.class);
-        cognito = mock(AWSCognitoIdentityProvider.class);
+        cognitoClient = mock(CognitoClient.class);
+//        cognito = mock(AWSCognitoIdentityProvider.class);
 
         when(cognitoClientProvider.getCognito()).thenReturn(cognito);
         uut.setCognitoClientProvider(cognitoClientProvider);
 
         PowerMockito.mockStatic(SecretHashCalculator.class);
         when(SecretHashCalculator.calculate(anyString(), anyString(), anyString())).thenReturn("SecretHashCalculatedValue$123");
-
 
         PowerMockito.mockStatic(SecurityUtils.class);
         Subject subject = mock(Subject.class);
@@ -113,6 +106,7 @@ public class CognitoRealmTest {
         usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
 
+        Map<String, String> authParams = new HashMap<>();
         AdminInitiateAuthResult adminInitiateAuthResult = mock(AdminInitiateAuthResult.class);
 
         when(cognito.adminInitiateAuth(any())).thenReturn(adminInitiateAuthResult);
@@ -150,7 +144,7 @@ public class CognitoRealmTest {
         usernamePasswordToken.setPassword(password.toCharArray());
         usernamePasswordToken.setUsername(username);
 
-        when(cognito.adminInitiateAuth(any())).thenThrow(new UserNotFoundException("Cognito could not find the user"));
+        when(cognitoClient.initiateAuth(any())).thenThrow(new UserNotFoundException("Cognito could not find the user"));
 
         try {
             uut.doGetAuthenticationInfo(usernamePasswordToken);

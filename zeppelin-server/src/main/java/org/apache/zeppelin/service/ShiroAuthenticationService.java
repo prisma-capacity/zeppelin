@@ -17,27 +17,6 @@
 package org.apache.zeppelin.service;
 
 import com.google.common.collect.Lists;
-
-import java.security.Principal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.inject.Inject;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
-import javax.naming.ldap.LdapContext;
-import javax.sql.DataSource;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.shiro.UnavailableSecurityManagerException;
@@ -54,10 +33,24 @@ import org.apache.shiro.util.ThreadContext;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.realm.ActiveDirectoryGroupRealm;
-import org.apache.zeppelin.realm.cognito.CognitoRealm;
 import org.apache.zeppelin.realm.LdapRealm;
+import org.apache.zeppelin.realm.cognito.CognitoRealm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapContext;
+import javax.sql.DataSource;
+import java.security.Principal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
 
 /**
  * AuthenticationService which use Apache Shiro.
@@ -229,7 +222,6 @@ public class ShiroAuthenticationService implements AuthenticationService {
 
         if (subject.isAuthenticated()) {
             Collection<Realm> realmsList = getRealmsList();
-            LOGGER.info("Try to get associated roles. User is also authenticated. Here are the realms: " + realmsList);
             for (Realm realm : realmsList) {
                 String name = realm.getClass().getName();
                 if (name.equals("org.apache.shiro.realm.text.IniRealm")) {
