@@ -18,6 +18,7 @@
  */
 package org.apache.zeppelin.realm.cognito;
 
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
 import com.amazonaws.services.cognitoidp.model.AdminInitiateAuthResult;
 import com.amazonaws.services.cognitoidp.model.AuthenticationResultType;
 import com.amazonaws.services.cognitoidp.model.UserNotFoundException;
@@ -29,6 +30,7 @@ import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.zeppelin.realm.PropertiesHelper;
 import org.apache.zeppelin.realm.cognito.CognitoClientProvider;
 import org.apache.zeppelin.realm.cognito.CognitoJwtVerifier;
 import org.apache.zeppelin.realm.cognito.CognitoRealm;
@@ -61,7 +63,7 @@ public class CognitoRealmTest {
     CognitoRealm uut;
     String username;
     String password;
-//    AWSCognitoIdentityProvider cognito;
+    AWSCognitoIdentityProvider cognito;
 
     CognitoJwtVerifier cognitoJwtVerifier;
     CognitoClient cognitoClient;
@@ -81,10 +83,11 @@ public class CognitoRealmTest {
 
         cognitoJwtVerifier = mock(CognitoJwtVerifier.class);
         cognitoClient = mock(CognitoClient.class);
-//        cognito = mock(AWSCognitoIdentityProvider.class);
+        cognito = mock(AWSCognitoIdentityProvider.class);
 
-        when(cognitoClientProvider.getCognito()).thenReturn(cognito);
-        uut.setCognitoClientProvider(cognitoClientProvider);
+        when(cognitoClient.getCognito()).thenReturn(cognito);
+//        uut.(cognitoClientProvider);
+        uut.onInit();
 
         PowerMockito.mockStatic(SecretHashCalculator.class);
         when(SecretHashCalculator.calculate(anyString(), anyString(), anyString())).thenReturn("SecretHashCalculatedValue$123");

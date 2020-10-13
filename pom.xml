@@ -61,7 +61,7 @@
     <module>zeppelin-jupyter-interpreter-shaded</module>
     <module>kotlin</module>
 <!--    <module>groovy</module>-->
-<!--    <module>spark</module>-->
+    <module>spark</module>
 <!--    <module>submarine</module>-->
     <module>markdown</module>
 <!--    <module>mongodb</module>-->
@@ -91,7 +91,7 @@
     <module>hazelcastjet</module>
 <!--    <module>geode</module>-->
 <!--    <module>ksql</module>-->
-<!--    <module>sparql</module>-->
+    <module>sparql</module>
     <module>zeppelin-common</module>
     <module>zeppelin-client</module>
     <module>zeppelin-client-examples</module>
