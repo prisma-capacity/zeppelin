@@ -27,8 +27,6 @@ import org.neo4j.driver.v1.types.Node;
 import org.neo4j.driver.v1.types.Relationship;
 import org.neo4j.driver.v1.types.TypeSystem;
 import org.neo4j.driver.v1.util.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,9 +53,6 @@ import org.apache.zeppelin.scheduler.SchedulerFactory;
  * Neo4j interpreter for Zeppelin.
  */
 public class Neo4jCypherInterpreter extends Interpreter {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(Neo4jCypherInterpreter.class);
-
   private static final String TABLE = "%table";
   public static final String NEW_LINE = "\n";
   public static final String TAB = "\t";
@@ -67,9 +62,9 @@ public class Neo4jCypherInterpreter extends Interpreter {
   private Map<String, String> labels;
 
   private Set<String> types;
-
+  
   private final Neo4jConnectionManager neo4jConnectionManager;
-
+  
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
   public Neo4jCypherInterpreter(Properties properties) {
@@ -122,7 +117,7 @@ public class Neo4jCypherInterpreter extends Interpreter {
 
   @Override
   public InterpreterResult interpret(String cypherQuery, InterpreterContext interpreterContext) {
-    LOGGER.info("Opening session");
+    logger.info("Opening session");
     if (StringUtils.isBlank(cypherQuery)) {
       return new InterpreterResult(Code.SUCCESS);
     }
@@ -160,7 +155,7 @@ public class Neo4jCypherInterpreter extends Interpreter {
         return renderTable(columns, lines);
       }
     } catch (Exception e) {
-      LOGGER.error("Exception while interpreting cypher query", e);
+      logger.error("Exception while interpreting cypher query", e);
       return new InterpreterResult(Code.ERROR, e.getMessage());
     }
   }
@@ -226,7 +221,7 @@ public class Neo4jCypherInterpreter extends Interpreter {
         try {
           value = jsonMapper.writer().writeValueAsString(value);
         } catch (Exception e) {
-          LOGGER.debug("ignored exception: " + e.getMessage());
+          logger.debug("ignored exception: " + e.getMessage());
         }
       }
     }
@@ -234,7 +229,7 @@ public class Neo4jCypherInterpreter extends Interpreter {
   }
 
   private InterpreterResult renderTable(List<String> cols, List<List<String>> lines) {
-    LOGGER.info("Executing renderTable method");
+    logger.info("Executing renderTable method");
     StringBuilder msg = null;
     if (cols.isEmpty()) {
       msg = new StringBuilder();
@@ -258,7 +253,7 @@ public class Neo4jCypherInterpreter extends Interpreter {
 
   private InterpreterResult renderGraph(Set<Node> nodes,
       Set<Relationship> relationships) {
-    LOGGER.info("Executing renderGraph method");
+    logger.info("Executing renderGraph method");
     List<org.apache.zeppelin.tabledata.Node> nodesList = new ArrayList<>();
     List<org.apache.zeppelin.tabledata.Relationship> relsList = new ArrayList<>();
     for (Relationship rel : relationships) {

@@ -35,7 +35,6 @@ public class NotebookWebSocketCreator implements WebSocketCreator {
   public NotebookWebSocketCreator(NotebookServer notebookServer) {
     this.notebookServer = notebookServer;
   }
-
   public Object createWebSocket(ServletUpgradeRequest request, ServletUpgradeResponse response) {
     String origin = request.getHeader("Origin");
     if (notebookServer.checkOrigin(request.getHttpServletRequest(), origin)) {

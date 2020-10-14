@@ -64,7 +64,6 @@ import {
   ParagraphClearOutput,
   ParagraphRemove,
   ParagraphRemoved,
-  ParagraphStatus,
   ParasInfo,
   PatchParagraphReceived,
   PatchParagraphSend,
@@ -103,7 +102,6 @@ export interface MessageReceiveDataTypeMap {
   [OP.PARAGRAPH_REMOVED]: ParagraphRemoved;
   [OP.EDITOR_SETTING]: EditorSettingReceived;
   [OP.PROGRESS]: Progress;
-  [OP.PARAGRAPH_STATUS]: ParagraphStatus;
   [OP.PARAGRAPH_MOVED]: ParagraphMoved;
   [OP.AUTH_INFO]: AuthInfo;
   [OP.NOTE_UPDATED]: NoteUpdated;

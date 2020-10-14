@@ -35,6 +35,8 @@ import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.RequestEntity;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.zeppelin.interpreter.InterpreterSettingManager;
+import org.apache.zeppelin.interpreter.integration.DownloadUtils;
 import org.apache.zeppelin.notebook.Notebook;
 import org.apache.zeppelin.plugin.PluginManager;
 import org.apache.zeppelin.utils.TestUtils;
@@ -186,7 +188,6 @@ public abstract class AbstractTestRestApi {
       zeppelinHome = new File("..");
       LOG.info("ZEPPELIN_HOME: " + zeppelinHome.getAbsolutePath());
       confDir = new File(zeppelinHome, "conf_" + testClassName);
-      FileUtils.deleteDirectory(confDir);
       LOG.info("ZEPPELIN_CONF_DIR: " + confDir.getAbsolutePath());
       confDir.mkdirs();
 
@@ -258,6 +259,12 @@ public abstract class AbstractTestRestApi {
       }
 
       LOG.info("Zeppelin Server is started.");
+
+      // set up spark interpreter
+      String sparkHome = DownloadUtils.downloadSpark("2.4.4", "2.7");
+      InterpreterSettingManager interpreterSettingManager = TestUtils.getInstance(InterpreterSettingManager.class);
+      InterpreterSetting interpreterSetting = interpreterSettingManager.getInterpreterSettingByName("spark");
+      interpreterSetting.setProperty("SPARK_HOME", sparkHome);
     }
   }
 

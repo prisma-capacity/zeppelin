@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.thrift.TException;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.display.AngularObject;
 import org.apache.zeppelin.display.AngularObjectRegistry;
 import org.apache.zeppelin.display.GUI;
@@ -45,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -54,7 +56,7 @@ import java.util.Properties;
  */
 public class RemoteInterpreter extends Interpreter {
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteInterpreter.class);
-  private static final Gson GSON = new Gson();
+  private static final Gson gson = new Gson();
 
 
   private String className;
@@ -214,7 +216,7 @@ public class RemoteInterpreter extends Interpreter {
     return interpreterProcess.callRemoteFunction(client -> {
           RemoteInterpreterResult remoteResult = client.interpret(
               sessionId, className, st, convert(context));
-          Map<String, Object> remoteConfig = (Map<String, Object>) GSON.fromJson(
+          Map<String, Object> remoteConfig = (Map<String, Object>) gson.fromJson(
               remoteResult.getConfig(), new TypeToken<Map<String, Object>>() {
               }.getType());
           context.getConfig().clear();
@@ -376,8 +378,8 @@ public class RemoteInterpreter extends Interpreter {
   private RemoteInterpreterContext convert(InterpreterContext ic) {
     return new RemoteInterpreterContext(ic.getNoteId(), ic.getNoteName(), ic.getParagraphId(),
         ic.getReplName(), ic.getParagraphTitle(), ic.getParagraphText(),
-        GSON.toJson(ic.getAuthenticationInfo()), GSON.toJson(ic.getConfig()), ic.getGui().toJson(),
-        GSON.toJson(ic.getNoteGui()),
+        gson.toJson(ic.getAuthenticationInfo()), gson.toJson(ic.getConfig()), ic.getGui().toJson(),
+        gson.toJson(ic.getNoteGui()),
         ic.getLocalProperties());
   }
 
@@ -408,7 +410,7 @@ public class RemoteInterpreter extends Interpreter {
       final java.lang.reflect.Type registryType = new TypeToken<Map<String,
           Map<String, AngularObject>>>() {
       }.getType();
-      client.angularRegistryPush(GSON.toJson(registry, registryType));
+      client.angularRegistryPush(gson.toJson(registry, registryType));
     }
   }
 

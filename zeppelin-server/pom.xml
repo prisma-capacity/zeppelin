@@ -24,7 +24,7 @@
     <artifactId>zeppelin</artifactId>
     <groupId>org.apache.zeppelin</groupId>
     <version>0.9.0-preview2</version>
-    <relativePath>../pom.xml</relativePath>
+    <relativePath>..</relativePath>
   </parent>
 
   <groupId>org.apache.zeppelin</groupId>
@@ -42,6 +42,7 @@
     <javax.ws.rsapi.version>2.1</javax.ws.rsapi.version>
     <libpam4j.version>1.11</libpam4j.version>
     <jna.version>4.1.0</jna.version>
+
     <!--test library versions-->
     <selenium.java.version>2.48.2</selenium.java.version>
     <xml.apis.version>1.4.01</xml.apis.version>
@@ -361,36 +362,12 @@
         <version>1.1</version>
       </dependency>
 
-    <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-cognitoidp -->
-    <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-cognitoidp</artifactId>
-      <version>1.11.865</version>
-    </dependency>
-
-    <!-- OpenId Connect -->
-    <!-- <dependency>
-      <groupId>io.buji</groupId>
-      <artifactId>buji-pac4j</artifactId>
-      <version>5.0.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-core</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-oidc</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-oauth</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency> -->
-
-
+      <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-cognitoidp -->
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-cognitoidp</artifactId>
+        <version>1.11.865</version>
+      </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -412,8 +389,7 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration combine.children="append">
-          <forkCount>1</forkCount>
-          <reuseForks>false</reuseForks>
+          <forkMode>always</forkMode>
           <argLine>-Xmx3g -Xms1g -Dfile.encoding=UTF-8</argLine>
           <excludes>
             <exclude>${tests.to.exclude}</exclude>

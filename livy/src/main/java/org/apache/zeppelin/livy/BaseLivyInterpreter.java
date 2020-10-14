@@ -55,6 +55,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.Principal;
@@ -234,7 +235,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
     try {
       return interpret(st, null, context.getParagraphId(), this.displayAppInfo, true, true);
     } catch (LivyException e) {
-      LOGGER.error("Fail to interpret: {}", st, e);
+      LOGGER.error("Fail to interpret:" + st, e);
       return new InterpreterResult(InterpreterResult.Code.ERROR,
           InterpreterUtils.getMostRelevantMessage(e));
     }
@@ -250,7 +251,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
       LOGGER.warn("Livy session {} is expired. Will return empty list of candidates.",
           getSessionInfo().id);
     } catch (LivyException le) {
-      LOGGER.error("Failed to call code completions. Will return empty list of candidates", le);
+      logger.error("Failed to call code completions. Will return empty list of candidates", le);
     }
     return candidates;
   }
@@ -264,7 +265,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
         candidates.add(new InterpreterCompletion(candidate, candidate, StringUtils.EMPTY));
       }
     } catch (APINotFoundException e) {
-      LOGGER.debug("completion api seems not to be available. (available from livy 0.5)", e);
+      logger.debug("completion api seems not to be available. (available from livy 0.5)", e);
     }
     return candidates;
   }
@@ -276,7 +277,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
       return;
     }
     paragraphsToCancel.add(context.getParagraphId());
-    LOGGER.info("Added paragraph {} for cancellation.", context.getParagraphId());
+    LOGGER.info("Added paragraph " + context.getParagraphId() + " for cancellation.");
   }
 
   @Override
@@ -334,7 +335,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
       }
       return sessionInfo;
     } catch (Exception e) {
-      LOGGER.error("Error when creating livy session for user {}", user, e);
+      LOGGER.error("Error when creating livy session for user " + user, e);
       throw new LivyException(e);
     }
   }
@@ -432,15 +433,15 @@ public abstract class BaseLivyInterpreter extends Interpreter {
   private void cancel(int id, String paragraphId) {
     if (livyVersion.isCancelSupported()) {
       try {
-        LOGGER.info("Cancelling statement {}", id);
+        LOGGER.info("Cancelling statement " + id);
         cancelStatement(id);
       } catch (LivyException e) {
-        LOGGER.error("Fail to cancel statement {} for paragraph {}", id, paragraphId, e);
+        LOGGER.error("Fail to cancel statement " + id + " for paragraph " + paragraphId, e);
       } finally {
         paragraphsToCancel.remove(paragraphId);
       }
     } else {
-      LOGGER.warn("cancel is not supported for this version of livy: {}", livyVersion);
+      LOGGER.warn("cancel is not supported for this version of livy: " + livyVersion);
       paragraphsToCancel.clear();
     }
   }
@@ -530,7 +531,7 @@ public abstract class BaseLivyInterpreter extends Interpreter {
             InterpreterResult.Type.TABLE, outputBuilder.toString());
       } else if (stmtInfo.output.data.imagePng != null) {
         return new InterpreterResult(InterpreterResult.Code.SUCCESS,
-            InterpreterResult.Type.IMG, stmtInfo.output.data.imagePng);
+            InterpreterResult.Type.IMG, (String) stmtInfo.output.data.imagePng);
       } else if (result != null) {
         result = result.trim();
         if (result.startsWith("<link")
@@ -606,12 +607,22 @@ public abstract class BaseLivyInterpreter extends Interpreter {
   }
 
   private KeyStore getStore(String file, String type, String password) {
-    try (FileInputStream inputStream = new FileInputStream(file)) {
+    FileInputStream inputStream = null;
+    try {
+      inputStream = new FileInputStream(file);
       KeyStore trustStore = KeyStore.getInstance(type);
-      trustStore.load(inputStream, password.toCharArray());
+      trustStore.load(new FileInputStream(file), password.toCharArray());
       return trustStore;
     } catch (Exception e) {
       throw new RuntimeException("Failed to open keystore " + file, e);
+    } finally {
+      if (inputStream != null) {
+        try {
+          inputStream.close();
+        } catch (IOException e) {
+          LOGGER.error("Failed to close keystore file", e);
+        }
+      }
     }
   }
 

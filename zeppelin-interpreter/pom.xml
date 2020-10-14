@@ -52,12 +52,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>zeppelin-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>io.atomix</groupId>
       <artifactId>atomix</artifactId>
       <version>${atomix.version}</version>
@@ -287,12 +281,6 @@
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-core</artifactId>
-          <version>3.3.3</version>
-          <scope>test</scope>
-      </dependency>
   </dependencies>
 
   <build>

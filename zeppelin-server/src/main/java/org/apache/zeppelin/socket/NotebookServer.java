@@ -72,8 +72,8 @@ import org.apache.zeppelin.notebook.Paragraph;
 import org.apache.zeppelin.notebook.ParagraphJobListener;
 import org.apache.zeppelin.notebook.AuthorizationService;
 import org.apache.zeppelin.notebook.repo.NotebookRepoWithVersionControl.Revision;
-import org.apache.zeppelin.common.Message;
-import org.apache.zeppelin.common.Message.OP;
+import org.apache.zeppelin.notebook.socket.Message;
+import org.apache.zeppelin.notebook.socket.Message.OP;
 import org.apache.zeppelin.rest.exception.ForbiddenException;
 import org.apache.zeppelin.scheduler.Job.Status;
 import org.apache.zeppelin.service.ConfigurationService;
@@ -95,8 +95,6 @@ import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.glassfish.hk2.api.ServiceLocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.zeppelin.common.Message.MSG_ID_NOT_DEFINED;
 
 /**
  * Zeppelin websocket service. This class used setter injection because all servlet should have
@@ -580,7 +578,7 @@ public class NotebookServer extends WebSocketServlet
 
   public void broadcastNote(Note note) {
     inlineBroadcastNote(note);
-    broadcastClusterEvent(ClusterEvent.BROADCAST_NOTE, MSG_ID_NOT_DEFINED, note);
+    broadcastClusterEvent(ClusterEvent.BROADCAST_NOTE, note);
   }
 
   private void inlineBroadcastNote(Note note) {
@@ -588,38 +586,36 @@ public class NotebookServer extends WebSocketServlet
     getConnectionManager().broadcast(note.getId(), message);
   }
 
-  private void inlineBroadcastParagraph(Note note, Paragraph p, String msgId) {
+  private void inlineBroadcastParagraph(Note note, Paragraph p) {
     broadcastNoteForms(note);
 
     if (note.isPersonalizedMode()) {
-      broadcastParagraphs(p.getUserParagraphMap(), p, msgId);
+      broadcastParagraphs(p.getUserParagraphMap(), p);
     } else {
-      Message message = new Message(OP.PARAGRAPH).withMsgId(msgId).put("paragraph", p);
+      Message message = new Message(OP.PARAGRAPH).put("paragraph", p);
       getConnectionManager().broadcast(note.getId(), message);
     }
   }
 
-  public void broadcastParagraph(Note note, Paragraph p, String msgId) {
-    inlineBroadcastParagraph(note, p, msgId);
-    broadcastClusterEvent(ClusterEvent.BROADCAST_PARAGRAPH, msgId, note, p);
+  public void broadcastParagraph(Note note, Paragraph p) {
+    inlineBroadcastParagraph(note, p);
+    broadcastClusterEvent(ClusterEvent.BROADCAST_PARAGRAPH, note, p);
   }
 
   private void inlineBroadcastParagraphs(Map<String, Paragraph> userParagraphMap,
-                                         Paragraph defaultParagraph,
-                                         String msgId) {
+                                         Paragraph defaultParagraph) {
     if (null != userParagraphMap) {
       for (String user : userParagraphMap.keySet()) {
-        Message message = new Message(OP.PARAGRAPH).withMsgId(msgId).put("paragraph", userParagraphMap.get(user));
+        Message message = new Message(OP.PARAGRAPH).put("paragraph", userParagraphMap.get(user));
         getConnectionManager().multicastToUser(user, message);
       }
     }
   }
 
   private void broadcastParagraphs(Map<String, Paragraph> userParagraphMap,
-                                   Paragraph defaultParagraph,
-                                   String msgId) {
-    inlineBroadcastParagraphs(userParagraphMap, defaultParagraph, msgId);
-    broadcastClusterEvent(ClusterEvent.BROADCAST_PARAGRAPHS, msgId, userParagraphMap, defaultParagraph);
+                                  Paragraph defaultParagraph) {
+    inlineBroadcastParagraphs(userParagraphMap, defaultParagraph);
+    broadcastClusterEvent(ClusterEvent.BROADCAST_PARAGRAPHS, userParagraphMap, defaultParagraph);
   }
 
   private void inlineBroadcastNewParagraph(Note note, Paragraph para) {
@@ -632,7 +628,7 @@ public class NotebookServer extends WebSocketServlet
 
   private void broadcastNewParagraph(Note note, Paragraph para) {
     inlineBroadcastNewParagraph(note, para);
-    broadcastClusterEvent(ClusterEvent.BROADCAST_NEW_PARAGRAPH, MSG_ID_NOT_DEFINED, note, para);
+    broadcastClusterEvent(ClusterEvent.BROADCAST_NEW_PARAGRAPH, note, para);
   }
 
   public void inlineBroadcastNoteList(AuthenticationInfo subject, Set<String> userAndRoles) {
@@ -651,18 +647,17 @@ public class NotebookServer extends WebSocketServlet
 
   public void broadcastNoteList(AuthenticationInfo subject, Set<String> userAndRoles) {
     inlineBroadcastNoteList(subject, userAndRoles);
-    broadcastClusterEvent(ClusterEvent.BROADCAST_NOTE_LIST, MSG_ID_NOT_DEFINED, subject, userAndRoles);
+    broadcastClusterEvent(ClusterEvent.BROADCAST_NOTE_LIST, subject, userAndRoles);
   }
 
   // broadcast ClusterEvent
-  private void broadcastClusterEvent(ClusterEvent event, String msgId, Object... objects) {
+  private void broadcastClusterEvent(ClusterEvent event, Object... objects) {
     ZeppelinConfiguration conf = ZeppelinConfiguration.create();
     if (!conf.isClusterMode()) {
       return;
     }
 
     ClusterMessage clusterMessage = new ClusterMessage(event);
-    clusterMessage.setMsgId(msgId);
 
     for(Object object : objects) {
       String json = "";
@@ -744,10 +739,10 @@ public class NotebookServer extends WebSocketServlet
         }
         break;
       case BROADCAST_PARAGRAPH:
-        inlineBroadcastParagraph(note, paragraph, message.getMsgId());
+        inlineBroadcastParagraph(note, paragraph);
         break;
       case BROADCAST_PARAGRAPHS:
-        inlineBroadcastParagraphs(userParagraphMap, paragraph, message.getMsgId());
+        inlineBroadcastParagraphs(userParagraphMap, paragraph);
         break;
       case BROADCAST_NEW_PARAGRAPH:
         inlineBroadcastNewParagraph(note, paragraph);
@@ -962,7 +957,7 @@ public class NotebookServer extends WebSocketServlet
     String noteName = (String) message.get("name");
     String defaultInterpreterGroup = (String) message.get("defaultInterpreterGroup");
 
-    getNotebookService().createNote(noteName, defaultInterpreterGroup, true, getServiceContext(message),
+    getNotebookService().createNote(noteName, defaultInterpreterGroup, getServiceContext(message),
         new WebSocketServiceCallback<Note>(conn) {
           @Override
           public void onSuccess(Note note, ServiceContext context) throws IOException {
@@ -1118,9 +1113,9 @@ public class NotebookServer extends WebSocketServlet
             if (p.getNote().isPersonalizedMode()) {
               Map<String, Paragraph> userParagraphMap =
                   p.getNote().getParagraph(paragraphId).getUserParagraphMap();
-              broadcastParagraphs(userParagraphMap, p, fromMessage.msgId);
+              broadcastParagraphs(userParagraphMap, p);
             } else {
-              broadcastParagraph(p.getNote(), p, fromMessage.msgId);
+              broadcastParagraph(p.getNote(), p);
             }
           }
         });
@@ -1258,9 +1253,9 @@ public class NotebookServer extends WebSocketServlet
           public void onSuccess(Paragraph p, ServiceContext context) throws IOException {
             super.onSuccess(p, context);
             if (p.getNote().isPersonalizedMode()) {
-              getConnectionManager().unicastParagraph(p.getNote(), p, context.getAutheInfo().getUser(), fromMessage.msgId);
+              getConnectionManager().unicastParagraph(p.getNote(), p, context.getAutheInfo().getUser());
             } else {
-              broadcastParagraph(p.getNote(), p, fromMessage.msgId);
+              broadcastParagraph(p.getNote(), p);
             }
           }
         });
@@ -1516,7 +1511,7 @@ public class NotebookServer extends WebSocketServlet
     String title = (String) fromMessage.get("title");
     Map<String, Object> params = (Map<String, Object>) fromMessage.get("params");
     Map<String, Object> config = (Map<String, Object>) fromMessage.get("config");
-    getNotebookService().runParagraph(noteId, paragraphId, title, text, params, config, null,
+    getNotebookService().runParagraph(noteId, paragraphId, title, text, params, config,
         false, false, getServiceContext(fromMessage),
         new WebSocketServiceCallback<Paragraph>(conn) {
           @Override
@@ -1525,7 +1520,7 @@ public class NotebookServer extends WebSocketServlet
             if (p.getNote().isPersonalizedMode()) {
               Paragraph p2 = p.getNote().clearPersonalizedParagraphOutput(paragraphId,
                   context.getAutheInfo().getUser());
-              getConnectionManager().unicastParagraph(p.getNote(), p2, context.getAutheInfo().getUser(), fromMessage.msgId);
+              getConnectionManager().unicastParagraph(p.getNote(), p2, context.getAutheInfo().getUser());
             }
 
             // if it's the last paragraph and not empty, let's add a new one
@@ -1703,7 +1698,7 @@ public class NotebookServer extends WebSocketServlet
       } else {
         note.clearParagraphOutput(paragraphId);
         Paragraph paragraph = note.getParagraph(paragraphId);
-        broadcastParagraph(note, paragraph, MSG_ID_NOT_DEFINED);
+        broadcastParagraph(note, paragraph);
       }
     } catch (IOException e) {
       LOG.warn("Fail to call onOutputClear", e);
@@ -1925,7 +1920,7 @@ public class NotebookServer extends WebSocketServlet
     }
 
     p.setStatusToUserParagraph(p.getStatus());
-    broadcastParagraph(p.getNote(), p, MSG_ID_NOT_DEFINED);
+    broadcastParagraph(p.getNote(), p);
     try {
       broadcastUpdateNoteJobInfo(p.getNote(), System.currentTimeMillis() - 5000);
     } catch (IOException e) {

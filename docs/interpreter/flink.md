@@ -221,11 +221,6 @@ You can also add and set other flink properties which are not listed in the tabl
     <td>true</td>
     <td>Whether cancel flink job when closing interpreter</td>
   </tr>
-  <tr>
-    <td>`zeppelin.flink.job.check_interval`</td>
-    <td>1000</td>
-    <td>Check interval (in milliseconds) to check flink job progress</td>
-  </tr>
 </table>
 
 
@@ -462,19 +457,9 @@ In this section, we will list and explain all the supported local properties in 
     <td>If you specify it, then when you cancel your flink job in Zeppelin, it would also do savepoint and store state in this directory. And when you resume your job, it would resume from this savepoint.</td>
   </tr>
   <tr>
-    <td>execution.savepoint.path</td>
+    <td>savepointPath</td>
     <td></td>
-    <td>When you resume your job, it would resume from this savepoint path.</td>
-  </tr>
-  <tr>
-    <td>resumeFromSavepoint</td>
-    <td></td>
-    <td>Resume flink job from savepoint if you specify savepointDir.</td>
-  </tr>
-  <tr>
-    <td>resumeFromLatestCheckpoint</td>
-    <td></td>
-    <td>Resume flink job from latest checkpoint if you enable checkpoint.</td>
+    <td>If you specify it, then when you resume your job, it would resume from this savepointPath .</td>
   </tr>
   <tr>
     <td>runAsOne</td>

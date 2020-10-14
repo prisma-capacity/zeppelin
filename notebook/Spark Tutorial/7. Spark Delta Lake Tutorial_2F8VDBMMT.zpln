@@ -33,6 +33,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588572279774_1507831415",
       "id": "paragraph_1588572279774_1507831415",
@@ -67,6 +68,7 @@
         "msg": []
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588147206215_1200788867",
       "id": "paragraph_1588147206215_1200788867",
@@ -79,7 +81,7 @@
       "title": "Create a table",
       "text": "%spark\n\nval data \u003d spark.range(0, 5)\ndata.write.format(\"delta\").save(\"/tmp/delta-table\")\n",
       "user": "anonymous",
-      "dateUpdated": "2020-04-29 16:13:31.957",
+      "dateUpdated": "2020-10-13 22:50:48.009",
       "config": {
         "colWidth": 6.0,
         "fontSize": 9.0,
@@ -99,22 +101,23 @@
         "forms": {}
       },
       "results": {
-        "code": "SUCCESS",
+        "code": "ERROR",
         "msg": [
           {
             "type": "TEXT",
-            "data": "\u001b[1m\u001b[34mdata\u001b[0m: \u001b[1m\u001b[32morg.apache.spark.sql.Dataset[Long]\u001b[0m \u003d [id: bigint]\n"
+            "data": "java.lang.NullPointerException\n\tat org.apache.zeppelin.spark.SparkInterpreter.getZeppelinContext(SparkInterpreter.java:212)\n\tat org.apache.zeppelin.interpreter.AbstractInterpreter.interpret(AbstractInterpreter.java:36)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:110)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:776)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:668)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:172)\n\tat org.apache.zeppelin.scheduler.AbstractScheduler.runJob(AbstractScheduler.java:130)\n\tat org.apache.zeppelin.scheduler.FIFOScheduler.lambda$runJobInScheduler$0(FIFOScheduler.java:39)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\n"
           }
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588147833426_1914590471",
       "id": "paragraph_1588147833426_1914590471",
       "dateCreated": "2020-04-29 16:10:33.426",
-      "dateStarted": "2020-04-29 16:11:45.197",
-      "dateFinished": "2020-04-29 16:11:49.694",
-      "status": "FINISHED"
+      "dateStarted": "2020-10-13 22:50:48.021",
+      "dateFinished": "2020-10-13 22:50:48.034",
+      "status": "ERROR"
     },
     {
       "title": "Read a table",
@@ -149,6 +152,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588147853461_1624743216",
       "id": "paragraph_1588147853461_1624743216",
@@ -190,6 +194,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588148062120_1790808564",
       "id": "paragraph_1588148062120_1790808564",
@@ -231,6 +236,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588147954117_626957150",
       "id": "paragraph_1588147954117_626957150",
@@ -272,6 +278,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588148133131_1770029903",
       "id": "paragraph_1588148133131_1770029903",
@@ -290,6 +297,7 @@
         "forms": {}
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1588148301603_1997345504",
       "id": "paragraph_1588148301603_1997345504",
@@ -297,7 +305,7 @@
       "status": "READY"
     }
   ],
-  "name": "6. Spark Delta Lake Tutorial",
+  "name": "7. Spark Delta Lake Tutorial",
   "id": "2F8VDBMMT",
   "defaultInterpreterGroup": "spark",
   "version": "0.9.0-SNAPSHOT",

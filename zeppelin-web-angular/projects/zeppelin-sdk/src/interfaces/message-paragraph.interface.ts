@@ -299,11 +299,6 @@ export interface Progress {
   progress: number;
 }
 
-export interface ParagraphStatus {
-  id: string;
-  status: string;
-}
-
 interface GraphConfigSetting {
   table?: VisualizationTable;
   lineChart?: VisualizationLineChart;

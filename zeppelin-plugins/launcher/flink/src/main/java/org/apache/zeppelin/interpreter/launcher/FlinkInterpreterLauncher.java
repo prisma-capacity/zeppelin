@@ -47,9 +47,7 @@ public class FlinkInterpreterLauncher extends StandardInterpreterLauncher {
       throw new IOException(String.format("FLINK_HOME '%s' is a file, but should be directory",
               flinkHome));
     }
-    if (!envs.containsKey("FLINK_CONF_DIR")) {
-      envs.put("FLINK_CONF_DIR", flinkHome + "/conf");
-    }
+    envs.put("FLINK_CONF_DIR", flinkHome + "/conf");
     envs.put("FLINK_LIB_DIR", flinkHome + "/lib");
     envs.put("FLINK_PLUGINS_DIR", flinkHome + "/plugins");
     return envs;

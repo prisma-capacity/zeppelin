@@ -36,8 +36,8 @@ import java.util.List;
  */
 public class InterpreterOutput extends OutputStream {
   Logger logger = LoggerFactory.getLogger(InterpreterOutput.class);
-  private static final int NEW_LINE_CHAR = '\n';
-  private static final int LINE_FEED_CHAR = '\r';
+  private final int NEW_LINE_CHAR = '\n';
+  private final int LINE_FEED_CHAR = '\r';
 
   private List<InterpreterResultMessageOutput> resultMessageOutputs = new LinkedList<>();
   private InterpreterResultMessageOutput currentOut;
@@ -50,10 +50,6 @@ public class InterpreterOutput extends OutputStream {
 
   private int size = 0;
   private int lastCRIndex = -1;
-
-  // disable table append by default, because table append may cause frontend output shaking.
-  // so just refresh all output for streaming application, such as flink streaming sql output.
-  private boolean enableTableAppend = false;
 
   // change static var to set interpreter output limit
   // limit will be applied to all InterpreterOutput object.
@@ -72,13 +68,6 @@ public class InterpreterOutput extends OutputStream {
     this.changeListener = listener;
   }
 
-  public void setEnableTableAppend(boolean enableTableAppend) {
-    this.enableTableAppend = enableTableAppend;
-    if (currentOut != null) {
-      currentOut.setEnableTableAppend(enableTableAppend);
-    }
-  }
-
   public void setType(InterpreterResult.Type type) throws IOException {
     InterpreterResultMessageOutput out = null;
 
@@ -92,7 +81,6 @@ public class InterpreterOutput extends OutputStream {
       } else {
         out = new InterpreterResultMessageOutput(type, listener, changeListener);
       }
-      out.setEnableTableAppend(enableTableAppend);
       out.setResourceSearchPaths(resourceSearchPaths);
 
       buffer.reset();

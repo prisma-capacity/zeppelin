@@ -21,6 +21,8 @@ import org.apache.flink.api.scala.ExecutionEnvironment;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.catalog.CatalogManager;
+import org.apache.flink.table.delegation.Planner;
 import org.apache.zeppelin.interpreter.Interpreter;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
@@ -88,7 +90,7 @@ public class FlinkInterpreter extends Interpreter {
       Thread.currentThread().setContextClassLoader(getFlinkScalaShellLoader());
       createPlannerAgain();
       setParallelismIfNecessary(context);
-      setSavepointIfNecessary(context);
+      setSavePointIfNecessary(context);
       return innerIntp.interpret(st, context);
     } finally {
       Thread.currentThread().setContextClassLoader(originClassLoader);
@@ -181,8 +183,8 @@ public class FlinkInterpreter extends Interpreter {
     return this.innerIntp.getFlinkShims();
   }
 
-  public void setSavepointIfNecessary(InterpreterContext context) {
-    this.innerIntp.setSavepointPathIfNecessary(context);
+  public void setSavePointIfNecessary(InterpreterContext context) {
+    this.innerIntp.setSavePointIfNecessary(context);
   }
 
   public void setParallelismIfNecessary(InterpreterContext context) {

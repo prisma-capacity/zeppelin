@@ -2,9 +2,8 @@
   "paragraphs": [
     {
       "text": "%md\n## Welcome to Zeppelin.\n##### This is a live tutorial, you can run the code yourself. (Shift-Enter to Run)",
-      "user": "[\"developer\",\"application-management\"]",
-      "dateUpdated": "2020-09-29 16:31:40.066",
-      "progress": 0,
+      "user": "anonymous",
+      "dateUpdated": "2016-12-17 15:32:15.000",
       "config": {
         "colWidth": 12.0,
         "editorHide": true,
@@ -27,8 +26,7 @@
           "editOnDblClick": true
         },
         "editorMode": "ace/mode/markdown",
-        "tableHide": false,
-        "fontSize": 9.0
+        "tableHide": false
       },
       "settings": {
         "params": {},
@@ -39,18 +37,17 @@
         "msg": [
           {
             "type": "HTML",
-            "data": "\u003cdiv class\u003d\"markdown-body\"\u003e\n\u003ch2\u003eWelcome to Zeppelin.\u003c/h2\u003e\n\u003ch5\u003eThis is a live tutorial, you can run the code yourself. (Shift-Enter to Run)\u003c/h5\u003e\n\n\u003c/div\u003e"
+            "data": "\u003cdiv class\u003d\"markdown-body\"\u003e\n\u003ch2\u003eWelcome to Zeppelin.\u003c/h2\u003e\n\u003ch5\u003eThis is a live tutorial, you can run the code yourself. (Shift-Enter to Run)\u003c/h5\u003e\n\u003c/div\u003e"
           }
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423836981412_-1007008116",
       "id": "20150213-231621_168813393",
       "dateCreated": "2015-02-13 23:16:21.000",
-      "dateStarted": "2020-09-29 16:31:40.073",
-      "dateFinished": "2020-09-29 16:31:41.250",
+      "dateStarted": "2016-12-17 15:32:15.000",
+      "dateFinished": "2016-12-17 15:32:18.000",
       "status": "FINISHED"
     },
     {
@@ -94,7 +91,6 @@
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423500779206_-1502780787",
       "id": "20150210-015259_1403135953",
@@ -107,10 +103,6 @@
       "text": "%sql \nselect age, count(1) value\nfrom bank \nwhere age \u003c 30 \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:43.954",
-<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
-      "progress": 0,
-=======
->>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [
@@ -171,7 +163,6 @@
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423500782552_-1439281894",
       "id": "20150210-015302_1492795503",
@@ -184,10 +175,6 @@
       "text": "%sql \nselect age, count(1) value \nfrom bank \nwhere age \u003c ${maxAge\u003d30} \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:45.514",
-<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
-      "progress": 0,
-=======
->>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [
@@ -248,7 +235,6 @@
         }
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423720444030_-1424110477",
       "id": "20150212-145404_867439529",
@@ -261,10 +247,6 @@
       "text": "%sql \nselect age, count(1) value \nfrom bank \nwhere marital\u003d\"${marital\u003dsingle,single|divorced|married}\" \ngroup by age \norder by age",
       "user": "anonymous",
       "dateUpdated": "2020-05-04 23:34:47.079",
-<<<<<<< HEAD:notebook/Spark Tutorial/2. Spark Basic Features_2A94M5J1Z.zpln
-      "progress": 0,
-=======
->>>>>>> d99e2c8cc214f00f89716183e211c9092468fd3f:notebook/Spark Tutorial/Spark Basic Features_2A94M5J1Z.zpln
       "config": {
         "colWidth": 4.0,
         "results": [
@@ -346,7 +328,6 @@
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423836262027_-210588283",
       "id": "20150213-230422_1600658137",
@@ -359,7 +340,6 @@
       "text": "%md\n## Congratulations, it\u0027s done.\n##### You can create your own notebook in \u0027Notebook\u0027 menu. Good luck!",
       "user": "anonymous",
       "dateUpdated": "2016-12-17 15:30:24.000",
-      "progress": 0,
       "config": {
         "colWidth": 12.0,
         "editorHide": true,
@@ -394,7 +374,6 @@
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1423836268492_216498320",
       "id": "20150213-230428_1231780373",
@@ -407,7 +386,6 @@
       "text": "%md\n\nAbout bank data\n\n```\nCitation Request:\n  This dataset is public available for research. The details are described in [Moro et al., 2011]. \n  Please include this citation if you plan to use this database:\n\n  [Moro et al., 2011] S. Moro, R. Laureano and P. Cortez. Using Data Mining for Bank Direct Marketing: An Application of the CRISP-DM Methodology. \n  In P. Novais et al. (Eds.), Proceedings of the European Simulation and Modelling Conference - ESM\u00272011, pp. 117-121, Guimarães, Portugal, October, 2011. EUROSIS.\n\n  Available at: [pdf] http://hdl.handle.net/1822/14838\n                [bib] http://www3.dsi.uminho.pt/pcortez/bib/2011-esm-1.txt\n```",
       "user": "anonymous",
       "dateUpdated": "2016-12-17 15:30:34.000",
-      "progress": 0,
       "config": {
         "colWidth": 12.0,
         "editorHide": true,
@@ -442,7 +420,6 @@
         ]
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1427420818407_872443482",
       "id": "20150326-214658_12335843",
@@ -452,15 +429,12 @@
       "status": "FINISHED"
     },
     {
-      "user": "anonymous",
-      "progress": 0,
       "config": {},
       "settings": {
         "params": {},
         "forms": {}
       },
       "apps": [],
-      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1435955447812_-158639899",
       "id": "20150703-133047_853701097",

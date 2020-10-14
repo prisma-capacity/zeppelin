@@ -18,7 +18,7 @@
 
 package org.apache.zeppelin.flink
 
-import java.io.{BufferedReader, File}
+import java.io.{BufferedReader, File, IOException}
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import java.util.Properties
@@ -46,14 +46,13 @@ import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, Tabl
 import org.apache.flink.table.module.ModuleManager
 import org.apache.flink.table.module.hive.HiveModule
 import org.apache.flink.yarn.cli.FlinkYarnSessionCli
-import org.apache.zeppelin.dep.DependencyResolver
+import org.apache.zeppelin.flink.util.DependencyUtils
 import org.apache.zeppelin.flink.FlinkShell._
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion
 import org.apache.zeppelin.interpreter.util.InterpreterOutputStream
 import org.apache.zeppelin.interpreter.{InterpreterContext, InterpreterException, InterpreterHookRegistry, InterpreterResult}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.{JavaConversions, JavaConverters}
 import scala.collection.JavaConverters._
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interpreter.Completion.ScalaCompleter
@@ -121,7 +120,7 @@ class FlinkScalaInterpreter(val properties: Properties) {
     modifiers.add("@transient")
     this.bind("z", z.getClass().getCanonicalName(), z, modifiers);
 
-    this.jobManager = new JobManager(this.z, jmWebUrl, replacedJMWebUrl, properties)
+    this.jobManager = new JobManager(this.z, jmWebUrl, replacedJMWebUrl)
 
     // register JobListener
     val jobListener = new FlinkJobListener()
@@ -276,9 +275,6 @@ class FlinkScalaInterpreter(val properties: Properties) {
       }
 
       LOGGER.info(s"\nConnecting to Flink cluster: " + this.jmWebUrl)
-      if (InterpreterContext.get() != null) {
-        InterpreterContext.get().getIntpEventClient.sendWebUrlInfo(this.jmWebUrl)
-      }
       LOGGER.info("externalJars: " +
         config.externalJars.getOrElse(Array.empty[String]).mkString(":"))
       val classLoader = Thread.currentThread().getContextClassLoader
@@ -399,27 +395,27 @@ class FlinkScalaInterpreter(val properties: Properties) {
 
       // blink planner
       var btEnvSetting = EnvironmentSettings.newInstance().inBatchMode().useBlinkPlanner().build()
-      this.btenv = tblEnvFactory.createJavaBlinkBatchTableEnvironment(btEnvSetting, getFlinkClassLoader);
+      this.btenv = tblEnvFactory.createJavaBlinkBatchTableEnvironment(btEnvSetting);
       flinkILoop.bind("btenv", btenv.getClass().getCanonicalName(), btenv, List("@transient"))
       this.java_btenv = this.btenv
 
       var stEnvSetting =
         EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build()
-      this.stenv = tblEnvFactory.createScalaBlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
+      this.stenv = tblEnvFactory.createScalaBlinkStreamTableEnvironment(stEnvSetting)
       flinkILoop.bind("stenv", stenv.getClass().getCanonicalName(), stenv, List("@transient"))
-      this.java_stenv = tblEnvFactory.createJavaBlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
+      this.java_stenv = tblEnvFactory.createJavaBlinkStreamTableEnvironment(stEnvSetting)
 
       // flink planner
       this.btenv_2 = tblEnvFactory.createScalaFlinkBatchTableEnvironment()
       flinkILoop.bind("btenv_2", btenv_2.getClass().getCanonicalName(), btenv_2, List("@transient"))
       stEnvSetting =
         EnvironmentSettings.newInstance().inStreamingMode().useOldPlanner().build()
-      this.stenv_2 = tblEnvFactory.createScalaFlinkStreamTableEnvironment(stEnvSetting, getFlinkClassLoader)
+      this.stenv_2 = tblEnvFactory.createScalaFlinkStreamTableEnvironment(stEnvSetting)
       flinkILoop.bind("stenv_2", stenv_2.getClass().getCanonicalName(), stenv_2, List("@transient"))
 
       this.java_btenv_2 = tblEnvFactory.createJavaFlinkBatchTableEnvironment()
       btEnvSetting = EnvironmentSettings.newInstance.useOldPlanner.inStreamingMode.build
-      this.java_stenv_2 = tblEnvFactory.createJavaFlinkStreamTableEnvironment(btEnvSetting, getFlinkClassLoader)
+      this.java_stenv_2 = tblEnvFactory.createJavaFlinkStreamTableEnvironment(btEnvSetting)
     } finally {
       Thread.currentThread().setContextClassLoader(originalClassLoader)
     }
@@ -503,7 +499,7 @@ class FlinkScalaInterpreter(val properties: Properties) {
             }
           }
         } catch {
-          case e : Throwable =>
+          case e : Exception =>
             LOGGER.info("Fail to inspect udf class: " + je.getName, e)
         }
       }
@@ -641,45 +637,30 @@ class FlinkScalaInterpreter(val properties: Properties) {
     }
   }
 
-  /**
-   * Set execution.savepoint.path in the following order:
-   *
-   * 1. Use savepoint path stored in paragraph config, this is recorded by zeppelin when paragraph is canceled,
-   * 2. Use checkpoint path stored in pararaph config, this is recorded by zeppelin in flink job progress poller.
-   * 3. Use local property 'execution.savepoint.path' if user set it.
-   * 4. Otherwise remove 'execution.savepoint.path' when user didn't specify it in %flink.conf
-   *
-   * @param context
-   */
-  def setSavepointPathIfNecessary(context: InterpreterContext): Unit = {
-    val savepointPath = context.getConfig.getOrDefault(JobManager.SAVEPOINT_PATH, "").toString
-    val resumeFromSavepoint = context.getBooleanLocalProperty(JobManager.RESUME_FROM_SAVEPOINT, false)
-    if (!StringUtils.isBlank(savepointPath) && resumeFromSavepoint){
-      LOGGER.info("Resume job from savepoint , savepointPath = {}", savepointPath)
-      configuration.setString(SavepointConfigOptions.SAVEPOINT_PATH.key(), savepointPath)
-      return
-    }
+  def setSavePointIfNecessary(context: InterpreterContext): Unit = {
+    val savepointDir = context.getLocalProperties.get("savepointDir")
+    val savepointPath = context.getLocalProperties.get("savepointPath");
 
-    val checkpointPath = context.getConfig.getOrDefault(JobManager.LATEST_CHECKPOINT_PATH, "").toString
-    val resumeFromLatestCheckpoint = context.getBooleanLocalProperty(JobManager.RESUME_FROM_CHECKPOINT, false)
-    if (!StringUtils.isBlank(checkpointPath) && resumeFromLatestCheckpoint) {
-      LOGGER.info("Resume job from checkpoint , checkpointPath = {}", checkpointPath)
-      configuration.setString(SavepointConfigOptions.SAVEPOINT_PATH.key(), checkpointPath)
+    if (!StringUtils.isBlank(savepointPath)){
+      LOGGER.info("savepointPath has been setup by user , savepointPath = {}", savepointPath)
+      configuration.setString("execution.savepoint.path", savepointPath)
       return
-    }
-
-    val userSavepointPath = context.getLocalProperties.getOrDefault(
-      SavepointConfigOptions.SAVEPOINT_PATH.key(), "")
-    if (!StringUtils.isBlank(userSavepointPath)) {
-      LOGGER.info("Resume job from user set savepoint , savepointPath = {}", userSavepointPath)
-      configuration.setString(SavepointConfigOptions.SAVEPOINT_PATH.key(), checkpointPath)
+    } else if ("".equals(savepointPath)) {
+      LOGGER.info("savepointPath is empty, remove execution.savepoint.path")
+      configuration.removeConfig(SavepointConfigOptions.SAVEPOINT_PATH);
       return;
     }
 
-    val userSettingSavepointPath = properties.getProperty(SavepointConfigOptions.SAVEPOINT_PATH.key())
-    if (StringUtils.isBlank(userSettingSavepointPath)) {
-      // remove SAVEPOINT_PATH when user didn't set it via %flink.conf
-      configuration.removeConfig(SavepointConfigOptions.SAVEPOINT_PATH)
+    if (!StringUtils.isBlank(savepointDir)) {
+      val savepointPath = z.angular(context.getParagraphId + "_savepointpath", context.getNoteId, null)
+      if (savepointPath == null) {
+        LOGGER.info("savepointPath is null because it is the first run")
+        // remove the SAVEPOINT_PATH which may be set by last job.
+        configuration.removeConfig(SavepointConfigOptions.SAVEPOINT_PATH)
+      } else {
+        LOGGER.info("Set savepointPath to: " + savepointPath.toString)
+        configuration.setString("execution.savepoint.path", savepointPath.toString)
+      }
     }
   }
 
@@ -788,11 +769,7 @@ class FlinkScalaInterpreter(val properties: Properties) {
     val flinkPackageJars =
       if (!StringUtils.isBlank(properties.getProperty("flink.execution.packages", ""))) {
         val packages = properties.getProperty("flink.execution.packages")
-        val dependencyDir = Files.createTempDirectory("zeppelin-flink-dep").toFile
-        val dependencyResolver = new DependencyResolver(dependencyDir.getAbsolutePath)
-        packages.split(",")
-          .flatMap(e => JavaConversions.asScalaBuffer(dependencyResolver.load(e, dependencyDir)))
-          .map(e => e.getAbsolutePath).toSeq
+        DependencyUtils.resolveMavenDependencies(null, packages, null, null, None).split(":").toSeq
       } else {
         Seq.empty[String]
       }

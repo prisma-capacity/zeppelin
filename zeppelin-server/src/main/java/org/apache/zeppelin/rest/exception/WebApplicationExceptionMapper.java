@@ -23,11 +23,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
-
 import org.apache.zeppelin.rest.message.gson.ExceptionSerializer;
 
 @Provider
-public class WebApplicationExceptionMapper implements ExceptionMapper<Throwable> {
+public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplicationException> {
   private final Gson gson;
 
   public WebApplicationExceptionMapper() {
@@ -38,11 +37,8 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<Throwable>
   }
 
   @Override
-  public Response toResponse(Throwable exception) {
-    if (exception instanceof WebApplicationException) {
-      return ((WebApplicationException) exception).getResponse();
-    } else {
-      return Response.status(500).entity(gson.toJson(exception)).build();
-    }
+  public Response toResponse(WebApplicationException exception) {
+    return Response.status(exception.getResponse().getStatus())
+        .entity(gson.toJson(exception)).build();
   }
 }

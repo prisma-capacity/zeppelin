@@ -56,8 +56,6 @@ public class AdminRestApi {
   @GET
   @ZeppelinApi
   public List<org.apache.log4j.Logger> getLoggerSetting(@QueryParam("name") String name) {
-    logger.info("In get /admin");
-    logger.info("name: {}", name);
     logger.debug("name: {}", name);
     return null == name || name.isEmpty()
         ? adminService.getLoggers()

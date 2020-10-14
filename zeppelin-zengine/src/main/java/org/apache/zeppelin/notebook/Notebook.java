@@ -301,7 +301,6 @@ public class Notebook {
     for (Paragraph p : paragraphs) {
       newNote.addCloneParagraph(p, subject);
     }
-    noteManager.saveNote(newNote, subject);
     return newNote;
   }
 
@@ -343,18 +342,7 @@ public class Notebook {
    * @throws IOException when fail to get it from NotebookRepo.
    */
   public Note getNote(String noteId) throws IOException {
-    return getNote(noteId, false);
-  }
-
-  /**
-   * Get note from NotebookRepo and also initialize it with other properties that is not
-   * persistent in NotebookRepo, such as paragraphJobListener.
-   * @param noteId
-   * @return null if note not found.
-   * @throws IOException when fail to get it from NotebookRepo.
-   */
-  public Note getNote(String noteId, boolean reload) throws IOException {
-    Note note = noteManager.getNote(noteId, reload);
+    Note note = noteManager.getNote(noteId);
     if (note == null) {
       return null;
     }

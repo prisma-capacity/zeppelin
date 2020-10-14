@@ -53,12 +53,6 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>zeppelin-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>zeppelin-interpreter</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -309,8 +303,7 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <reuseForks>false</reuseForks>
-          <forkCount>1</forkCount>
+          <forkMode>always</forkMode>
           <systemProperties>
             <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
           </systemProperties>

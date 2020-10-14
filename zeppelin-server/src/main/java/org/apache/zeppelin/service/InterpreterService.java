@@ -45,8 +45,8 @@ import org.sonatype.aether.RepositoryException;
 public class InterpreterService {
 
   private static final String ZEPPELIN_ARTIFACT_PREFIX = "zeppelin-";
-  private static final Logger LOGGER = LoggerFactory.getLogger(InterpreterService.class);
-  private static final ExecutorService EXECUTOR_SERVICE =
+  private static final Logger logger = LoggerFactory.getLogger(InterpreterService.class);
+  private static final ExecutorService executorService =
       Executors.newSingleThreadExecutor(
           new ThreadFactoryBuilder()
               .setNameFormat(InterpreterService.class.getSimpleName() + "-")
@@ -63,7 +63,7 @@ public class InterpreterService {
   }
 
   public void installInterpreter(
-      final InterpreterInstallationRequest request, final ServiceCallback<String> serviceCallback)
+      final InterpreterInstallationRequest request, final ServiceCallback serviceCallback)
       throws Exception {
     Preconditions.checkNotNull(request);
     String interpreterName = request.getName();
@@ -112,7 +112,7 @@ public class InterpreterService {
     }
 
     // It might take time to finish it
-    EXECUTOR_SERVICE.execute(
+    executorService.execute(
         new Runnable() {
           @Override
           public void run() {
@@ -127,28 +127,28 @@ public class InterpreterService {
       Path interpreterDir,
       ServiceCallback<String> serviceCallback) {
     try {
-      LOGGER.info("Start to download a dependency: {}", request.getName());
+      logger.info("Start to download a dependency: {}", request.getName());
       if (null != serviceCallback) {
         serviceCallback.onStart("Starting to download " + request.getName() + " interpreter", null);
       }
 
       dependencyResolver.load(request.getArtifact(), interpreterDir.toFile());
       interpreterSettingManager.refreshInterpreterTemplates();
-      LOGGER.info(
+      logger.info(
           "Finish downloading a dependency {} into {}",
           request.getName(),
-          interpreterDir);
+          interpreterDir.toString());
       if (null != serviceCallback) {
         serviceCallback.onSuccess(request.getName() + " downloaded", null);
       }
     } catch (RepositoryException | IOException e) {
-      LOGGER.error("Error while downloading dependencies", e);
+      logger.error("Error while downloading dependencies", e);
       try {
         FileUtils.deleteDirectory(interpreterDir.toFile());
       } catch (IOException e1) {
-        LOGGER.error(
+        logger.error(
             "Error while removing directory. You should handle it manually: {}",
-            interpreterDir,
+            interpreterDir.toString(),
             e1);
       }
       if (null != serviceCallback) {
@@ -157,7 +157,7 @@ public class InterpreterService {
               new Exception("Error while downloading " + request.getName() + " as " +
                   e.getMessage()), null);
         } catch (IOException e1) {
-          LOGGER.error("ServiceCallback failure", e1);
+          logger.error("ServiceCallback failure", e1);
         }
       }
     }

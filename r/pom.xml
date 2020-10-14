@@ -22,14 +22,14 @@
   <parent>
     <artifactId>zeppelin-interpreter-parent</artifactId>
     <groupId>org.apache.zeppelin</groupId>
-    <version>0.9.0-preview2</version>
+    <version>0.9.0-SNAPSHOT</version>
     <relativePath>../zeppelin-interpreter-parent/pom.xml</relativePath>
   </parent>
 
   <groupId>org.apache.zeppelin</groupId>
   <artifactId>zeppelin-zrinterpreter_${scala.binary.version}</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.0-preview2</version>
+  <version>0.9.0-SNAPSHOT</version>
   <name>Zeppelin: R Interpreter</name>
   <description>R Interpreter for Zeppelin</description>
   <url>https://zeppelin.apache.org</url>
@@ -189,8 +189,7 @@
           <junitxml>.</junitxml>
           <filereports>testoutput.txt</filereports>
           <parallel>false</parallel>
-          <forkCount>1</forkCount>
-          <reuseForks>true</reuseForks>
+          <forkMode>once</forkMode>
           <systemProperties>
             <scala.usejavacp>true</scala.usejavacp>
           </systemProperties>

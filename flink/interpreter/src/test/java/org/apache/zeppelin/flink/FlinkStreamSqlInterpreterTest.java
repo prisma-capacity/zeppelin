@@ -216,7 +216,7 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
       try {
         InterpreterContext context = getInterpreterContext();
         context.getLocalProperties().put("type", "update");
-        context.getLocalProperties().put("savePointDir", savePointDir.getAbsolutePath());
+        context.getLocalProperties().put("savepointDir", savePointDir.getAbsolutePath());
         context.getLocalProperties().put("parallelism", "1");
         context.getLocalProperties().put("maxParallelism", "10");
         InterpreterResult result2 = sqlInterpreter.interpret("select url, count(1) as pv from " +
@@ -239,7 +239,7 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
 
     InterpreterContext context = getInterpreterContext();
     context.getLocalProperties().put("type", "update");
-    context.getLocalProperties().put("savePointDir", savePointDir.getAbsolutePath());
+    context.getLocalProperties().put("savepointDir", savePointDir.getAbsolutePath());
     context.getLocalProperties().put("parallelism", "2");
     context.getLocalProperties().put("maxParallelism", "10");
     sqlInterpreter.cancel(context);
@@ -268,7 +268,7 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
       try {
         InterpreterContext context = getInterpreterContext();
         context.getLocalProperties().put("type", "update");
-        context.getLocalProperties().put("savePointDir", savePointDir.getAbsolutePath());
+        context.getLocalProperties().put("savepointDir", savePointDir.getAbsolutePath());
         context.getLocalProperties().put("parallelism", "1");
         context.getLocalProperties().put("maxParallelism", "10");
         InterpreterResult result2 = sqlInterpreter.interpret("select url, count(1) as pv from " +
@@ -289,7 +289,7 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
 
     InterpreterContext context = getInterpreterContext();
     context.getLocalProperties().put("type", "update");
-    context.getLocalProperties().put("savePointDir", savePointDir.getAbsolutePath());
+    context.getLocalProperties().put("savepointDir", savePointDir.getAbsolutePath());
     context.getLocalProperties().put("parallelism", "2");
     context.getLocalProperties().put("maxParallelism", "10");
     sqlInterpreter.cancel(context);
@@ -303,7 +303,7 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
     String savepointPath = savePointDir.getAbsolutePath().concat(File.separator).concat(allSavepointPath[0]);
 
     // resume job from exist savepointPath
-    context.getConfig().put(JobManager.SAVEPOINT_PATH,savepointPath);
+    context.getLocalProperties().put("savepointPath",savepointPath);
     sqlInterpreter.interpret("select url, count(1) as pv from " +
             "log group by url", context);
     assertEquals(InterpreterResult.Code.SUCCESS, result.code());
@@ -316,23 +316,25 @@ public class FlinkStreamSqlInterpreterTest extends SqlInterpreterTest {
 
   @Test
   public void testResumeStreamSqlFromInvalidSavePointPath() throws IOException, InterpreterException, InterruptedException, TimeoutException {
-    String initStreamScalaScript = getInitStreamScript(2000);
+    String initStreamScalaScript = getInitStreamScript(1000);
     InterpreterResult result = flinkInterpreter.interpret(initStreamScalaScript,
             getInterpreterContext());
     assertEquals(InterpreterResult.Code.SUCCESS, result.code());
 
+    File savepointPath = FileUtils.getTempDirectory();
     InterpreterContext context = getInterpreterContext();
     context.getLocalProperties().put("type", "update");
+    context.getLocalProperties().put("savepointPath", savepointPath.getAbsolutePath());
     context.getLocalProperties().put("parallelism", "1");
     context.getLocalProperties().put("maxParallelism", "10");
-    context.getLocalProperties().put(JobManager.RESUME_FROM_SAVEPOINT, "true");
-    context.getConfig().put(JobManager.SAVEPOINT_PATH, "/invalid_savepoint");
-    
-    result = sqlInterpreter.interpret("select url, count(1) as pv from " +
+    InterpreterResult result2 = sqlInterpreter.interpret("select url, count(1) as pv from " +
             "log group by url", context);
 
-    assertEquals(InterpreterResult.Code.ERROR, result.code());
-    assertTrue(context.out.toString(), context.out.toString().contains("Cannot find checkpoint or savepoint"));
+    // due to invalid savepointPath, failed to submit job and throw exception
+    assertEquals(InterpreterResult.Code.ERROR, result2.code());
+    List<InterpreterResultMessage> resultMessages = context.out.toInterpreterResultMessage();
+    assertTrue(resultMessages.toString().contains("Failed to submit job."));
+
   }
 
   @Test

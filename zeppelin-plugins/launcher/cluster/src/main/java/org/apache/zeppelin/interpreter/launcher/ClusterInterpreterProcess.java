@@ -17,7 +17,6 @@ public class ClusterInterpreterProcess extends RemoteInterpreterManagedProcess {
       String localRepoDir,
       Map<String, String> env,
       int connectTimeout,
-      int connectionPoolSize,
       String interpreterSettingName,
       String interpreterGroupId,
       boolean isUserImpersonated) {
@@ -30,7 +29,6 @@ public class ClusterInterpreterProcess extends RemoteInterpreterManagedProcess {
       localRepoDir,
       env,
       connectTimeout,
-      connectionPoolSize,
       interpreterSettingName,
       interpreterGroupId,
       isUserImpersonated);

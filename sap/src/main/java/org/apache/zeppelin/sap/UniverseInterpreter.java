@@ -19,7 +19,6 @@ package org.apache.zeppelin.sap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.interpreter.AbstractInterpreter;
-import org.apache.zeppelin.interpreter.Interpreter;
 import org.apache.zeppelin.interpreter.ZeppelinContext;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
@@ -28,8 +27,7 @@ import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.sap.universe.*;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -40,8 +38,6 @@ import java.util.concurrent.TimeUnit;
  * SAP Universe interpreter for Zeppelin.
  */
 public class UniverseInterpreter extends AbstractInterpreter {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(UniverseInterpreter.class);
 
   public UniverseInterpreter(Properties properties) {
     super(properties);
@@ -138,7 +134,7 @@ public class UniverseInterpreter extends AbstractInterpreter {
       try {
         client.closeSession(context.getParagraphId());
       } catch (Exception e) {
-        LOGGER.error("Error close SAP session", e );
+        logger.error("Error close SAP session", e );
       }
     }
   }
@@ -148,7 +144,7 @@ public class UniverseInterpreter extends AbstractInterpreter {
     try {
       client.closeSession(context.getParagraphId());
     } catch (Exception e) {
-      LOGGER.error("Error close SAP session", e );
+      logger.error("Error close SAP session", e );
     }
   }
 
@@ -172,7 +168,7 @@ public class UniverseInterpreter extends AbstractInterpreter {
       universeCompleter = createOrUpdateUniverseCompleter(interpreterContext, buf, cursor);
       universeCompleter.complete(buf, cursor, candidates);
     } catch (UniverseException e) {
-      LOGGER.error("Error update completer", e );
+      logger.error("Error update completer", e );
     }
 
     return candidates;
@@ -248,12 +244,12 @@ public class UniverseInterpreter extends AbstractInterpreter {
 
       executorService.awaitTermination(10, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      LOGGER.warn("Completion timeout", e);
+      logger.warn("Completion timeout", e);
     } finally {
       try {
         client.closeSession(interpreterContext.getParagraphId());
       } catch (Exception e) {
-        LOGGER.error("Error close SAP session", e );
+        logger.error("Error close SAP session", e );
       }
     }
     return completer;

@@ -37,6 +37,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700849_2035279674",
       "id": "20180530-101118_380906698",
@@ -82,6 +83,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_-1934281275",
       "id": "20180530-101515_948520659",
@@ -127,6 +129,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_-1709355244",
       "id": "20180530-110023_1756702033",
@@ -165,6 +168,7 @@
         "msg": []
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_-1532509261",
       "id": "20180530-110007_162886838",
@@ -177,7 +181,7 @@
       "title": "Create Dataset/DataFrame via SparkSession",
       "text": "%spark.pyspark\n\n# create DataFrame from python list. It can infer schema for you.\ndf1 \u003d spark.createDataFrame([(1, \"andy\", 20, \"USA\"), (2, \"jeff\", 23, \"China\"), (3, \"james\", 18, \"USA\")]).toDF(\"id\", \"name\", \"age\", \"country\")\ndf1.printSchema()\ndf1.show()\n\n# create DataFrame from pandas dataframe\ndf2 \u003d spark.createDataFrame(df1.toPandas())\ndf2.printSchema()\ndf2.show()\n\n\n\n\n\n\n\n\n\n\n\n\n",
       "user": "anonymous",
-      "dateUpdated": "2020-03-11 11:19:32.923",
+      "dateUpdated": "2020-10-13 22:49:50.104",
       "config": {
         "editorSetting": {
           "language": "python",
@@ -199,22 +203,23 @@
         "forms": {}
       },
       "results": {
-        "code": "SUCCESS",
+        "code": "ERROR",
         "msg": [
           {
             "type": "TEXT",
-            "data": "root\n |-- id: long (nullable \u003d true)\n |-- name: string (nullable \u003d true)\n |-- age: long (nullable \u003d true)\n |-- country: string (nullable \u003d true)\n\n+---+-----+---+-------+\n| id| name|age|country|\n+---+-----+---+-------+\n|  1| andy| 20|    USA|\n|  2| jeff| 23|  China|\n|  3|james| 18|    USA|\n+---+-----+---+-------+\n\nroot\n |-- id: long (nullable \u003d true)\n |-- name: string (nullable \u003d true)\n |-- age: long (nullable \u003d true)\n |-- country: string (nullable \u003d true)\n\n+---+-----+---+-------+\n| id| name|age|country|\n+---+-----+---+-------+\n|  1| andy| 20|    USA|\n|  2| jeff| 23|  China|\n|  3|james| 18|    USA|\n+---+-----+---+-------+\n\n"
+            "data": "org.apache.zeppelin.interpreter.InterpreterException: org.apache.zeppelin.interpreter.InterpreterException: Fail to open PythonInterpreter\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.open(LazyOpenInterpreter.java:76)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:760)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:668)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:172)\n\tat org.apache.zeppelin.scheduler.AbstractScheduler.runJob(AbstractScheduler.java:130)\n\tat org.apache.zeppelin.scheduler.FIFOScheduler.lambda$runJobInScheduler$0(FIFOScheduler.java:39)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: org.apache.zeppelin.interpreter.InterpreterException: Fail to open PythonInterpreter\n\tat org.apache.zeppelin.python.PythonInterpreter.open(PythonInterpreter.java:115)\n\tat org.apache.zeppelin.spark.PySparkInterpreter.open(PySparkInterpreter.java:93)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.open(LazyOpenInterpreter.java:70)\n\t... 8 more\nCaused by: java.io.IOException: Fail to launch python process.\norg.apache.commons.exec.ExecuteException: Execution failed (Exit value: -559038737. Caused by java.io.IOException: Cannot run program \"python\" (in directory \".\"): error\u003d2, No such file or directory)\n\tat org.apache.commons.exec.DefaultExecutor$1.run(DefaultExecutor.java:205)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: java.io.IOException: Cannot run program \"python\" (in directory \".\"): error\u003d2, No such file or directory\n\tat java.lang.ProcessBuilder.start(ProcessBuilder.java:1048)\n\tat java.lang.Runtime.exec(Runtime.java:621)\n\tat org.apache.commons.exec.launcher.Java13CommandLauncher.exec(Java13CommandLauncher.java:61)\n\tat org.apache.commons.exec.DefaultExecutor.launch(DefaultExecutor.java:279)\n\tat org.apache.commons.exec.DefaultExecutor.executeInternal(DefaultExecutor.java:336)\n\tat org.apache.commons.exec.DefaultExecutor.access$200(DefaultExecutor.java:48)\n\tat org.apache.commons.exec.DefaultExecutor$1.run(DefaultExecutor.java:200)\n\t... 1 more\nCaused by: java.io.IOException: error\u003d2, No such file or directory\n\tat java.lang.UNIXProcess.forkAndExec(Native Method)\n\tat java.lang.UNIXProcess.\u003cinit\u003e(UNIXProcess.java:247)\n\tat java.lang.ProcessImpl.start(ProcessImpl.java:134)\n\tat java.lang.ProcessBuilder.start(ProcessBuilder.java:1029)\n\t... 7 more\n\n\tat org.apache.zeppelin.python.PythonInterpreter.createGatewayServerAndStartScript(PythonInterpreter.java:160)\n\tat org.apache.zeppelin.python.PythonInterpreter.open(PythonInterpreter.java:112)\n\t... 10 more\n"
           }
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_1345292725",
       "id": "20180530-101750_1491737301",
       "dateCreated": "2020-01-07 17:01:40.850",
-      "dateStarted": "2020-03-11 11:19:32.929",
-      "dateFinished": "2020-03-11 11:19:33.544",
-      "status": "FINISHED"
+      "dateStarted": "2020-10-13 22:49:50.140",
+      "dateFinished": "2020-10-13 22:50:04.538",
+      "status": "ERROR"
     },
     {
       "title": "Create DataFrame via DataFrameReader",
@@ -252,6 +257,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_581443636",
       "id": "20180530-101930_1495479697",
@@ -295,6 +301,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_-775755394",
       "id": "20180530-105113_693855403",
@@ -338,6 +345,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_-886487025",
       "id": "20180530-112045_1274721210",
@@ -381,6 +389,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_2124268380",
       "id": "20180530-113042_1154914545",
@@ -424,6 +433,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_1501705200",
       "id": "20180530-113407_58454283",
@@ -467,6 +477,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_574730063",
       "id": "20180530-113720_1986531680",
@@ -510,6 +521,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700850_1233271138",
       "id": "20180530-114404_2076888937",
@@ -553,6 +565,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_-770209064",
       "id": "20180530-130126_1642948432",
@@ -596,6 +609,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_-177297320",
       "id": "20180530-135600_354945835",
@@ -639,6 +653,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_1756979054",
       "id": "20180530-132023_995737505",
@@ -703,6 +718,7 @@
         "forms": {}
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578388432752_877455036",
       "id": "paragraph_1578388432752_877455036",
@@ -748,6 +764,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_1924561483",
       "id": "20180530-132128_2114955642",
@@ -892,6 +909,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_-809695439",
       "id": "20180530-132634_1285621466",
@@ -930,6 +948,7 @@
         "msg": []
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_381269276",
       "id": "20180530-132657_668624333",
@@ -1072,6 +1091,7 @@
         ]
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_601200360",
       "id": "20180530-132823_944494152",
@@ -1103,6 +1123,7 @@
         "forms": {}
       },
       "apps": [],
+      "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
       "jobName": "paragraph_1578387700851_-2136199261",
       "id": "20180530-132849_1305166760",
@@ -1110,7 +1131,7 @@
       "status": "FINISHED"
     }
   ],
-  "name": "Spark SQL (PySpark)",
+  "name": "3. Spark SQL (PySpark)",
   "id": "2EWM84JXA",
   "defaultInterpreterGroup": "spark",
   "version": "0.9.0-SNAPSHOT",

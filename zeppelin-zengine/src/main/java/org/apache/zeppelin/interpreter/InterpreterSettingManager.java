@@ -187,13 +187,13 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
             conf.getRecoveryStorageClass(),
             new Class[] {ZeppelinConfiguration.class, InterpreterSettingManager.class},
             new Object[] {conf, this});
-    LOGGER.info("Using RecoveryStorage: {}", this.recoveryStorage.getClass().getName());
+    LOGGER.info("Using RecoveryStorage: " + this.recoveryStorage.getClass().getName());
     this.lifecycleManager =
         ReflectionUtils.createClazzInstance(
             conf.getLifecycleManagerClass(),
             new Class[] {ZeppelinConfiguration.class},
             new Object[] {conf});
-    LOGGER.info("Using LifecycleManager: {}", this.lifecycleManager.getClass().getName());
+    LOGGER.info("Using LifecycleManager: " + this.lifecycleManager.getClass().getName());
 
     this.configStorage = configStorage;
     init();
@@ -255,7 +255,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
     //TODO(zjffdu) still ugly (should move all to InterpreterInfoSaving)
     for (InterpreterSetting savedInterpreterSetting : infoSaving.interpreterSettings.values()) {
       if (!shouldRegister(savedInterpreterSetting.getGroup())) {
-        continue;
+        break;
       }
       savedInterpreterSetting.setProperties(InterpreterSetting.convertInterpreterProperties(
           savedInterpreterSetting.getProperties()
@@ -278,8 +278,9 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
         savedInterpreterSetting.setInterpreterRunner(
             interpreterSettingTemplate.getInterpreterRunner());
       } else {
-        LOGGER.warn("No InterpreterSetting Template found for InterpreterSetting: {},"
-          + " but it is found in interpreter.json, it would be skipped.", savedInterpreterSetting.getGroup());
+        LOGGER.warn("No InterpreterSetting Template found for InterpreterSetting: "
+            + savedInterpreterSetting.getGroup() + ", but it is found in interpreter.json, "
+            + "it would be skipped.");
         continue;
       }
 
@@ -291,7 +292,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
         }
       }
       savedInterpreterSetting.postProcessing();
-      LOGGER.info("Create interpreter setting {} from interpreter.json",
+      LOGGER.info("Create Interpreter Setting {} from interpreter.json",
           savedInterpreterSetting.getName());
       interpreterSettings.put(savedInterpreterSetting.getId(), savedInterpreterSetting);
     }
@@ -301,7 +302,6 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
       initInterpreterSetting(interpreterSetting);
       // add newly detected interpreter if it doesn't exist in interpreter.json
       if (!interpreterSettings.containsKey(interpreterSetting.getId())) {
-        LOGGER.info("Create interpreter setting: {} from interpreter setting template", interpreterSetting.getId());
         interpreterSettings.put(interpreterSetting.getId(), interpreterSetting);
       }
     }
@@ -495,7 +495,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
         .setName(group)
         .setInterpreterInfos(interpreterInfos)
         .setProperties(properties)
-        .setDependencies(new ArrayList<>())
+        .setDependencies(new ArrayList<Dependency>())
         .setOption(option)
         .setRunner(runner)
         .setInterpreterDir(interpreterDir)
@@ -520,7 +520,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
       }
       return interpreterSetting;
     } catch (Exception e) {
-      LOGGER.warn("Fail to get note: {}", noteId, e);
+      LOGGER.warn("Fail to get note: " + noteId, e);
       return get().get(0);
     }
   }
@@ -594,7 +594,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
             if (interpreterSetting == null) {
               return DEFAULT_EDITOR;
             }
-            return interpreterSetting.getInterpreterInfo(intpName).getEditor();
+            return interpreterSetting.getDefaultInterpreterInfo().getEditor();
           } catch (Exception e) {
             LOGGER.warn(e.getMessage());
             return DEFAULT_EDITOR;
@@ -742,7 +742,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
     try {
       List<Dependency> deps = setting.getDependencies();
       if (deps != null) {
-        LOGGER.info("Start to copy dependencies for interpreter: {}", setting.getName());
+        LOGGER.info("Start to copy dependencies for interpreter: " + setting.getName());
         for (Dependency d : deps) {
           File destDir = new File(
               conf.getRelativeDir(ConfVars.ZEPPELIN_DEP_LOCALREPO));
@@ -753,7 +753,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
                 new File(destDir, setting.getId()));
           }
         }
-        LOGGER.info("Finish copy dependencies for interpreter: {}", setting.getName());
+        LOGGER.info("Finish copy dependencies for interpreter: " + setting.getName());
       }
     } catch (Exception e) {
       LOGGER.error(String.format("Error while copying deps for interpreter group : %s," +
@@ -846,7 +846,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
       File[] files = path.listFiles();
       if (files != null) {
         for (File f : files) {
-          urls = ArrayUtils.addAll(urls, recursiveBuildLibList(f));
+          urls = (URL[]) ArrayUtils.addAll(urls, recursiveBuildLibList(f));
         }
       }
       return urls;
@@ -972,7 +972,7 @@ public class InterpreterSettingManager implements NoteEventListener, ClusterEven
     // 2. remove this interpreter setting
     // 3. remove this interpreter setting from note binding
     // 4. clean local repo directory
-    LOGGER.info("Remove interpreter setting: {}", id);
+    LOGGER.info("Remove interpreter setting: " + id);
     if (interpreterSettings.containsKey(id)) {
       InterpreterSetting intp = interpreterSettings.get(id);
       intp.close();

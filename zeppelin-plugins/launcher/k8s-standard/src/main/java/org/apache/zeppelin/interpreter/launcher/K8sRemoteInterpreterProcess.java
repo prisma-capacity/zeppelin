@@ -38,7 +38,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
   private final String interpreterGroupId;
   private final String interpreterGroupName;
   private final String interpreterSettingName;
-  private final File specTemplates;
+  private final File specTempaltes;
   private final String containerImage;
   private final Properties properties;
   private final Map<String, String> envs;
@@ -54,11 +54,10 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
   private AtomicBoolean started = new AtomicBoolean(false);
   private Random rand = new Random();
 
-  private static final String SPARK_DRIVER_MEMORY = "spark.driver.memory";
-  private static final String SPARK_DRIVER_MEMORY_OVERHEAD = "spark.driver.memoryOverhead";
+  private static final String SPARK_DRIVER_MEMROY = "spark.driver.memory";
+  private static final String SPARK_DRIVER_MEMROY_OVERHEAD = "spark.driver.memoryOverhead";
   private static final String SPARK_DRIVER_CORES = "spark.driver.cores";
   private static final String ENV_SERVICE_DOMAIN = "SERVICE_DOMAIN";
-  private static final String ENV_ZEPPELIN_HOME = "ZEPPELIN_HOME";
 
   public K8sRemoteInterpreterProcess(
           KubernetesClient client,
@@ -75,13 +74,12 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
           boolean portForward,
           String sparkImage,
           int connectTimeout,
-          int connectionPoolSize,
           boolean isUserImpersonatedForSpark
   ) {
-    super(connectTimeout, connectionPoolSize, intpEventServerHost, intpEventServerPort);
+    super(connectTimeout, intpEventServerHost, intpEventServerPort);
     this.client = client;
     this.namespace = namespace;
-    this.specTemplates = specTemplates;
+    this.specTempaltes = specTemplates;
     this.containerImage = containerImage;
     this.interpreterGroupId = interpreterGroupId;
     this.interpreterGroupName = interpreterGroupName;
@@ -126,7 +124,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
 
     Properties templateProperties = getTemplateBindings(userName);
     // create new pod
-    apply(specTemplates, false, templateProperties);
+    apply(specTempaltes, false, templateProperties);
 
     if (portForward) {
       podPort = RemoteInterpreterUtils.findRandomAvailablePortOnAllLocalInterfaces();
@@ -175,7 +173,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
     Properties templateProperties = getTemplateBindings(null);
     // delete pod
     try {
-      apply(specTemplates, true, templateProperties);
+      apply(specTempaltes, true, templateProperties);
     } catch (IOException e) {
       LOGGER.info("Error on removing interpreter pod", e);
     }
@@ -282,7 +280,7 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
 
     // environment variables
     envs.put(ENV_SERVICE_DOMAIN, envs.getOrDefault(ENV_SERVICE_DOMAIN, System.getenv(ENV_SERVICE_DOMAIN)));
-    envs.put(ENV_ZEPPELIN_HOME, envs.getOrDefault(ENV_ZEPPELIN_HOME, System.getenv(ENV_ZEPPELIN_HOME)));
+    envs.put("ZEPPELIN_HOME", envs.getOrDefault("ZEPPELIN_HOME", "/zeppelin"));
 
     if (isSpark()) {
       int webUiPort = 4040;
@@ -305,13 +303,13 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
               envs.get(ENV_SERVICE_DOMAIN)
           ));
       // Resources of Interpreter Pod
-      if (properties.containsKey(SPARK_DRIVER_MEMORY)) {
+      if (properties.containsKey(SPARK_DRIVER_MEMROY)) {
         String memory;
-        if (properties.containsKey(SPARK_DRIVER_MEMORY_OVERHEAD)) {
-          memory = K8sUtils.calculateSparkMemory(properties.getProperty(SPARK_DRIVER_MEMORY),
-                                                 properties.getProperty(SPARK_DRIVER_MEMORY_OVERHEAD));
+        if (properties.containsKey(SPARK_DRIVER_MEMROY_OVERHEAD)) {
+          memory = K8sUtils.calculateSparkMemory(properties.getProperty(SPARK_DRIVER_MEMROY),
+                                                 properties.getProperty(SPARK_DRIVER_MEMROY_OVERHEAD));
         } else {
-          memory = K8sUtils.calculateMemoryWithDefaultOverhead(properties.getProperty(SPARK_DRIVER_MEMORY));
+          memory = K8sUtils.calculateMemoryWithDefaultOverhead(properties.getProperty(SPARK_DRIVER_MEMROY));
         }
         k8sProperties.put("zeppelin.k8s.interpreter.memory", memory);
       }
@@ -361,8 +359,8 @@ public class K8sRemoteInterpreterProcess extends RemoteInterpreterProcess {
 
     options.append(" --master k8s://https://kubernetes.default.svc");
     options.append(" --deploy-mode client");
-    if (properties.containsKey(SPARK_DRIVER_MEMORY)) {
-      options.append(" --driver-memory " + properties.get(SPARK_DRIVER_MEMORY));
+    if (properties.containsKey(SPARK_DRIVER_MEMROY)) {
+      options.append(" --driver-memory " + properties.get(SPARK_DRIVER_MEMROY));
     }
     if (isUserImpersonatedForSpark && !StringUtils.containsIgnoreCase(userName, "anonymous") && isSpark()) {
       options.append(" --proxy-user " + userName);

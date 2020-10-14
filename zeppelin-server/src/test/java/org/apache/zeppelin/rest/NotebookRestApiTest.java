@@ -107,7 +107,7 @@ public class NotebookRestApiTest extends AbstractTestRestApi {
   }
 
   @Test
-  public void testRunParagraphJob() throws Exception {
+  public void testRunParagraphJob() throws IOException {
     LOG.info("Running testRunParagraphJob");
     Note note1 = null;
     try {
@@ -117,25 +117,23 @@ public class NotebookRestApiTest extends AbstractTestRestApi {
       Paragraph p = note1.addNewParagraph(AuthenticationInfo.ANONYMOUS);
 
       // run blank paragraph
-      PostMethod post = httpPost("/notebook/job/" + note1.getId() + "/" + p.getId(), "");
+      PostMethod post = httpPost("/notebook/job/" + note1.getId() + "/" + p.getId() + "?blocking=true", "");
       assertThat(post, isAllowed());
       Map<String, Object> resp = gson.fromJson(post.getResponseBodyAsString(),
               new TypeToken<Map<String, Object>>() {}.getType());
       assertEquals(resp.get("status"), "OK");
       post.releaseConnection();
-      p.waitUntilFinished();
       assertEquals(p.getStatus(), Job.Status.FINISHED);
 
       // run non-blank paragraph
       p.setText("test");
-      post = httpPost("/notebook/job/" + note1.getId() + "/" + p.getId(), "");
+      post = httpPost("/notebook/job/" + note1.getId() + "/" + p.getId() + "?blocking=true", "");
       assertThat(post, isAllowed());
       resp = gson.fromJson(post.getResponseBodyAsString(),
               new TypeToken<Map<String, Object>>() {}.getType());
       assertEquals(resp.get("status"), "OK");
       post.releaseConnection();
-      p.waitUntilFinished();
-      assertNotEquals(p.getStatus(), Job.Status.FINISHED);
+      assertNotEquals(p.getStatus(), Job.Status.READY);
     } finally {
       // cleanup
       if (null != note1) {
@@ -178,10 +176,10 @@ public class NotebookRestApiTest extends AbstractTestRestApi {
       p.setText(text);
 
       post = httpPost("/notebook/run/" + note1.getId() + "/" + p.getId(), "");
-      assertEquals(200, post.getStatusCode());
+      assertEquals(500, post.getStatusCode());
       resp = gson.fromJson(post.getResponseBodyAsString(),
               new TypeToken<Map<String, Object>>() {}.getType());
-      assertEquals("OK", resp.get("status"));
+      assertEquals("INTERNAL_SERVER_ERROR", resp.get("status"));
       StringMap stringMap = (StringMap) resp.get("body");
       assertEquals("ERROR", stringMap.get("code"));
       List<StringMap> interpreterResults = (List<StringMap>) stringMap.get("msg");
@@ -472,7 +470,12 @@ public class NotebookRestApiTest extends AbstractTestRestApi {
       p2.setText("%python user2='abc'\nprint(user2)");
 
       PostMethod post = httpPost("/notebook/job/" + note1.getId() + "?blocking=true", "");
-      assertThat(post, isAllowed());
+      assertThat(post, isExpectationFailed());
+      Map<String, Object> resp = gson.fromJson(post.getResponseBodyAsString(),
+              new TypeToken<Map<String, Object>>() {}.getType());
+      assertEquals(resp.get("status"), "EXPECTATION_FAILED");
+      assertTrue(resp.get("message").toString().contains("Fail to run note because paragraph"));
+      post.releaseConnection();
 
       assertEquals(Job.Status.ERROR, p1.getStatus());
       // p2 will be skipped because p1 is failed.

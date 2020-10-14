@@ -42,8 +42,6 @@
 
         <!-- spark versions -->
         <spark.version>2.4.5</spark.version>
-        <protobuf.version>2.5.0</protobuf.version>
-        <py4j.version>0.10.7</py4j.version>
         <spark.scala.version>2.11.12</spark.scala.version>
         <spark.scala.binary.version>2.11</spark.scala.binary.version>
 
@@ -197,7 +195,7 @@
         <profile>
             <id>spark-3.0</id>
             <properties>
-                <spark.version>3.0.1</spark.version>
+                <spark.version>3.0.0</spark.version>
                 <protobuf.version>2.5.0</protobuf.version>
                 <py4j.version>0.10.9</py4j.version>
             </properties>

@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,12 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class JobManager {
 
   private static Logger LOGGER = LoggerFactory.getLogger(JobManager.class);
-  public static final String LATEST_CHECKPOINT_PATH = "latest_checkpoint_path";
-  public static final String SAVEPOINT_PATH = "savepoint_path";
-  public static final String RESUME_FROM_SAVEPOINT = "resumeFromSavepoint";
-  public static final String RESUME_FROM_CHECKPOINT = "resumeFromLatestCheckpoint";
-  public static final String SAVEPOINT_DIR = "savepointDir";
-
 
   private Map<String, JobClient> jobs = new HashMap<>();
   private ConcurrentHashMap<JobID, FlinkJobProgressPoller> jobProgressPollerMap =
@@ -52,23 +45,19 @@ public class JobManager {
   private FlinkZeppelinContext z;
   private String flinkWebUrl;
   private String replacedFlinkWebUrl;
-  private Properties properties;
 
   public JobManager(FlinkZeppelinContext z,
                     String flinkWebUrl,
-                    String replacedFlinkWebUrl,
-                    Properties properties) {
+                    String replacedFlinkWebUrl) {
     this.z = z;
     this.flinkWebUrl = flinkWebUrl;
     this.replacedFlinkWebUrl = replacedFlinkWebUrl;
-    this.properties = properties;
   }
 
   public void addJob(InterpreterContext context, JobClient jobClient) {
     String paragraphId = context.getParagraphId();
     JobClient previousJobClient = this.jobs.put(paragraphId, jobClient);
-    long checkInterval = Long.parseLong(properties.getProperty("zeppelin.flink.job.check_interval", "1000"));
-    FlinkJobProgressPoller thread = new FlinkJobProgressPoller(flinkWebUrl, jobClient.getJobID(), context, checkInterval);
+    FlinkJobProgressPoller thread = new FlinkJobProgressPoller(flinkWebUrl, jobClient.getJobID(), context);
     thread.setName("JobProgressPoller-Thread-" + paragraphId);
     thread.start();
     this.jobProgressPollerMap.put(jobClient.getJobID(), thread);
@@ -140,18 +129,15 @@ public class JobManager {
 
     boolean cancelled = false;
     try {
-      String savePointDir = context.getLocalProperties().get(SAVEPOINT_DIR);
-      if (StringUtils.isBlank(savePointDir)) {
+      String savepointDir = context.getLocalProperties().get("savepointDir");
+      if (StringUtils.isBlank(savepointDir)) {
         LOGGER.info("Trying to cancel job of paragraph {}", context.getParagraphId());
         jobClient.cancel();
       } else {
         LOGGER.info("Trying to stop job of paragraph {} with save point dir: {}",
-                context.getParagraphId(), savePointDir);
-        String savePointPath = jobClient.stopWithSavepoint(true, savePointDir).get();
-        Map<String, String> config = new HashMap<>();
-        config.put(SAVEPOINT_PATH, savePointPath);
-        context.getIntpEventClient().updateParagraphConfig(
-                context.getNoteId(), context.getParagraphId(), config);
+                context.getParagraphId(), savepointDir);
+        String savePointPath = jobClient.stopWithSavepoint(true, savepointDir).get();
+        z.angularBind(context.getParagraphId() + "_savepointpath", savePointPath);
         LOGGER.info("Job {} of paragraph {} is stopped with save point path: {}",
                 jobClient.getJobID(), context.getParagraphId(), savePointPath);
       }
@@ -190,14 +176,12 @@ public class JobManager {
     private int progress;
     private AtomicBoolean running = new AtomicBoolean(true);
     private boolean isFirstPoll = true;
-    private long checkInterval;
 
-    FlinkJobProgressPoller(String flinkWebUrl, JobID jobId, InterpreterContext context, long checkInterval) {
+    FlinkJobProgressPoller(String flinkWebUrl, JobID jobId, InterpreterContext context) {
       this.flinkWebUrl = flinkWebUrl;
       this.jobId = jobId;
       this.context = context;
       this.isStreamingInsertInto = context.getLocalProperties().containsKey("flink.streaming.insert_into");
-      this.checkInterval = checkInterval;
     }
 
     @Override
@@ -206,7 +190,7 @@ public class JobManager {
         JsonNode rootNode = null;
         try {
           synchronized (running) {
-            running.wait(checkInterval);
+            running.wait(1000);
           }
           rootNode = Unirest.get(flinkWebUrl + "/jobs/" + jobId.toString())
                   .asJson().getBody();
@@ -244,26 +228,6 @@ public class JobManager {
                     toRichTimeDuration(duration),
                     context.getNoteId(),
                     context.getParagraphId());
-          }
-
-          // fetch checkpoints info and save the latest checkpoint into paragraph's config.
-          rootNode = Unirest.get(flinkWebUrl + "/jobs/" + jobId.toString() + "/checkpoints")
-                  .asJson().getBody();
-          if (rootNode.getObject().has("latest")) {
-            JSONObject latestObject = rootNode.getObject().getJSONObject("latest");
-            if (latestObject.has("completed") && latestObject.get("completed") instanceof JSONObject) {
-              JSONObject completedObject = latestObject.getJSONObject("completed");
-              if (completedObject.has("external_path")) {
-                String checkpointPath = completedObject.getString("external_path");
-                LOGGER.debug("Latest checkpoint path: {}", checkpointPath);
-                if (!StringUtils.isBlank(checkpointPath)) {
-                  Map<String, String> config = new HashMap<>();
-                  config.put(LATEST_CHECKPOINT_PATH, checkpointPath);
-                  context.getIntpEventClient().updateParagraphConfig(
-                          context.getNoteId(), context.getParagraphId(), config);
-                }
-              }
-            }
           }
         } catch (Exception e) {
           LOGGER.error("Fail to poll flink job progress via rest api", e);

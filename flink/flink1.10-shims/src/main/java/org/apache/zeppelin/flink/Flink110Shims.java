@@ -53,8 +53,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -227,17 +225,7 @@ public class Flink110Shims extends FlinkShims {
 
   @Override
   public Object getCustomCli(Object cliFrontend, Object commandLine) {
-    try {
-      return ((CliFrontend) cliFrontend).validateAndGetActiveCommandLine((CommandLine) commandLine);
-    } catch (NoSuchMethodError e) {
-      try {
-        Method method = CliFrontend.class.getMethod("getActiveCustomCommandLine", CommandLine.class);
-        return method.invoke((CliFrontend) cliFrontend, commandLine);
-      } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
-        LOGGER.error("Fail to call getCustomCli", ex);
-        throw new RuntimeException("Fail to call getCustomCli", ex);
-      }
-    }
+    return ((CliFrontend)cliFrontend).getActiveCustomCommandLine((CommandLine) commandLine);
   }
 
   @Override

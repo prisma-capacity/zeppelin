@@ -117,10 +117,9 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
       Map<String, String> envs,
       String intpEventServerHost,
       int intpEventServerPort,
-      int connectTimeout,
-      int connectionPoolSize
+      int connectTimeout
   ) {
-    super(connectTimeout, connectionPoolSize, intpEventServerHost, intpEventServerPort);
+    super(connectTimeout, intpEventServerHost, intpEventServerPort);
 
     this.containerImage = containerImage;
     this.interpreterGroupId = interpreterGroupId;

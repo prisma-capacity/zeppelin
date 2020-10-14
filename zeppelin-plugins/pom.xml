@@ -49,7 +49,7 @@
         <module>notebookrepo/mongo</module>
         <module>notebookrepo/oss</module>
 
-        <module>launcher/k8s-standard</module>
+<!--        <module>launcher/k8s-standard</module>-->
         <module>launcher/cluster</module>
         <module>launcher/docker</module>
         <module>launcher/yarn</module>

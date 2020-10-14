@@ -56,6 +56,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,14 +66,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_INTERPRETER_CONNECTION_POOL_SIZE;
+import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_INTERPRETER_MAX_POOL_SIZE;
 import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_INTERPRETER_OUTPUT_LIMIT;
 import static org.apache.zeppelin.util.IdHashes.generateId;
 
@@ -292,7 +293,7 @@ public class InterpreterSetting {
     this.name = o.name;
     this.group = o.group;
     this.properties = convertInterpreterProperties(
-        o.getProperties());
+        (Map<String, DefaultInterpreterProperty>) o.getProperties());
     this.interpreterInfos = new ArrayList<>(o.getInterpreterInfos());
     this.option = InterpreterOption.fromInterpreterOption(o.getOption());
     this.dependencies = new ArrayList<>(o.getDependencies());
@@ -371,7 +372,9 @@ public class InterpreterSetting {
   }
 
   public InterpreterInfo getInterpreterInfo(String name) {
-    for (InterpreterInfo info :interpreterInfos) {
+    Iterator it = this.interpreterInfos.iterator();
+    while (it.hasNext()) {
+      InterpreterInfo info = (InterpreterInfo) it.next();
       if (StringUtils.equals(info.getName(), name)) {
         return info;
       }
@@ -418,10 +421,6 @@ public class InterpreterSetting {
   }
 
   private String getInterpreterGroupId(ExecutionContext executionContext) {
-    if (!StringUtils.isBlank(executionContext.getInterpreterGroupId())) {
-      return executionContext.getInterpreterGroupId();
-    }
-
     if (executionContext.isInIsolatedMode()) {
       return name + "-isolated-" + executionContext.getNoteId() + "-" +
               executionContext.getStartTime();
@@ -478,7 +477,7 @@ public class InterpreterSetting {
       }
       return interpreterGroups.get(groupId);
     } finally {
-      interpreterGroupWriteLock.unlock();
+      interpreterGroupWriteLock.unlock();;
     }
   }
 
@@ -509,10 +508,10 @@ public class InterpreterSetting {
     return interpreterGroups.get(groupId);
   }
 
-  public List<ManagedInterpreterGroup> getAllInterpreterGroups() {
+  public ArrayList<ManagedInterpreterGroup> getAllInterpreterGroups() {
     try {
       interpreterGroupReadLock.lock();
-      return new ArrayList<>(interpreterGroups.values());
+      return new ArrayList(interpreterGroups.values());
     } finally {
       interpreterGroupReadLock.unlock();
     }
@@ -534,10 +533,6 @@ public class InterpreterSetting {
     closeInterpreters(new ExecutionContextBuilder().setUser(user).setNoteId(noteId).createExecutionContext());
   }
 
-  public void closeInterpreters(String interpreterGroupId) {
-    closeInterpreters(new ExecutionContextBuilder().setInterpreterGroupId(interpreterGroupId).createExecutionContext());
-  }
-
   public void closeInterpreters(ExecutionContext executionContext) {
     ManagedInterpreterGroup interpreterGroup = getInterpreterGroup(executionContext);
     if (interpreterGroup != null) {
@@ -547,7 +542,7 @@ public class InterpreterSetting {
   }
 
   public void close() {
-    LOGGER.info("Close InterpreterSetting: {}", name);
+    LOGGER.info("Close InterpreterSetting: " + name);
     List<Thread> closeThreads = interpreterGroups.values().stream()
             .map(g -> new Thread(g::close, name + "-close"))
             .peek(t -> t.setUncaughtExceptionHandler((th, e) ->
@@ -570,8 +565,8 @@ public class InterpreterSetting {
     if (object instanceof StringMap) {
       StringMap<String> map = (StringMap) properties;
       Properties newProperties = new Properties();
-      for (Entry<String, String> mapEntries : map.entrySet()) {
-        newProperties.put(mapEntries.getKey(), mapEntries.getValue());
+      for (String key : map.keySet()) {
+        newProperties.put(key, map.get(key));
       }
       this.properties = newProperties;
     } else {
@@ -668,9 +663,9 @@ public class InterpreterSetting {
           conf.getInt(ZEPPELIN_INTERPRETER_OUTPUT_LIMIT) + "");
     }
 
-    if (!jProperties.containsKey(ZEPPELIN_INTERPRETER_CONNECTION_POOL_SIZE.getVarName())) {
-      jProperties.setProperty(ZEPPELIN_INTERPRETER_CONNECTION_POOL_SIZE.getVarName(),
-          conf.getInt(ZEPPELIN_INTERPRETER_CONNECTION_POOL_SIZE) + "");
+    if (!jProperties.containsKey("zeppelin.interpreter.max.poolsize")) {
+      jProperties.setProperty("zeppelin.interpreter.max.poolsize",
+          conf.getInt(ZEPPELIN_INTERPRETER_MAX_POOL_SIZE) + "");
     }
 
     String interpreterLocalRepoPath = conf.getInterpreterLocalRepoPath();
@@ -695,9 +690,7 @@ public class InterpreterSetting {
 
   public void setDependencies(List<Dependency> dependencies) {
     this.dependencies = dependencies;
-    if (!this.dependencies.isEmpty()) {
-      loadInterpreterDependencies();
-    }
+    loadInterpreterDependencies();
   }
 
   public InterpreterOption getOption() {
@@ -726,9 +719,7 @@ public class InterpreterSetting {
         this.dependencies.add(dependency);
       }
     }
-    if (!dependencies.isEmpty()) {
-      loadInterpreterDependencies();
-    }
+    loadInterpreterDependencies();
   }
 
   void setInterpreterOption(InterpreterOption interpreterOption) {
@@ -761,7 +752,7 @@ public class InterpreterSetting {
   }
 
   public void setStatus(Status status) {
-    LOGGER.info("Set interpreter {} status to{}", name, status.name());
+    LOGGER.info(String.format("Set interpreter %s status to %s", name, status.name()));
     this.status = status;
   }
 
@@ -790,11 +781,11 @@ public class InterpreterSetting {
       return "K8sStandardInterpreterLauncher";
     } else if (isRunningOnCluster()) {
       return InterpreterSetting.CLUSTER_INTERPRETER_LAUNCHER_NAME;
-    } else if (isRunningOnDocker()) {
+    } if (isRunningOnDocker()) {
       return "DockerInterpreterLauncher";
     } else {
       String launcher = properties.getProperty("zeppelin.interpreter.launcher");
-      LOGGER.debug("zeppelin.interpreter.launcher: {}", launcher);
+      LOGGER.debug("zeppelin.interpreter.launcher: " + launcher);
       if (group.equals("spark")) {
         return "SparkInterpreterLauncher";
       } else if (group.equals("flink")) {
@@ -975,11 +966,10 @@ public class InterpreterSetting {
     setStatus(Status.DOWNLOADING_DEPENDENCIES);
     setErrorReason(null);
     Thread t = new Thread() {
-      @Override
       public void run() {
         try {
           // dependencies to prevent library conflict
-          File localRepoDir = new File(conf.getInterpreterLocalRepoPath() + '/' + id);
+          File localRepoDir = new File(conf.getInterpreterLocalRepoPath() + "/" + id);
           if (localRepoDir.exists()) {
             try {
               FileUtils.forceDelete(localRepoDir);
@@ -991,7 +981,7 @@ public class InterpreterSetting {
           // load dependencies
           List<Dependency> deps = getDependencies();
           if (deps != null && !deps.isEmpty()) {
-            LOGGER.info("Start to download dependencies for interpreter: {}", name);
+            LOGGER.info("Start to download dependencies for interpreter: " + name);
             for (Dependency d : deps) {
               File destDir = new File(
                   conf.getRelativeDir(ZeppelinConfiguration.ConfVars.ZEPPELIN_DEP_LOCALREPO));
@@ -1004,7 +994,7 @@ public class InterpreterSetting {
                     .load(d.getGroupArtifactVersion(), new File(destDir, id));
               }
             }
-            LOGGER.info("Finish downloading dependencies for interpreter: {}", name);
+            LOGGER.info("Finish downloading dependencies for interpreter: " + name);
           }
 
           setStatus(Status.READY);
@@ -1016,12 +1006,6 @@ public class InterpreterSetting {
               getGroup(), e.getLocalizedMessage()), e);
           setErrorReason(e.getLocalizedMessage());
           setStatus(Status.ERROR);
-        }
-
-        try {
-          interpreterSettingManager.saveToFile();
-        } catch (IOException e) {
-          LOGGER.error("Fail to save interpreter.json", e);
         }
       }
     };
@@ -1049,7 +1033,7 @@ public class InterpreterSetting {
 
   // For backward compatibility of interpreter.json format after ZEPPELIN-2403
   static Map<String, InterpreterProperty> convertInterpreterProperties(Object properties) {
-    if (properties instanceof StringMap) {
+    if (properties != null && properties instanceof StringMap) {
       Map<String, InterpreterProperty> newProperties = new LinkedHashMap<>();
       StringMap p = (StringMap) properties;
       for (Object o : p.entrySet()) {
@@ -1075,9 +1059,8 @@ public class InterpreterSetting {
       Map<String, Object> dProperties =
           (Map<String, Object>) properties;
       Map<String, InterpreterProperty> newProperties = new LinkedHashMap<>();
-      for (Entry<String, Object> dPropertiesEntry : dProperties.entrySet()) {
-        String key = dPropertiesEntry.getKey();
-        Object value = dPropertiesEntry.getValue();
+      for (String key : dProperties.keySet()) {
+        Object value = dProperties.get(key);
         if (value instanceof InterpreterProperty) {
           return (Map<String, InterpreterProperty>) properties;
         } else if (value instanceof StringMap) {
@@ -1112,7 +1095,7 @@ public class InterpreterSetting {
       }
       return newProperties;
     }
-    throw new RuntimeException("Can not convert this type: " + (properties != null ? properties.getClass() : "null"));
+    throw new RuntimeException("Can not convert this type: " + properties.getClass());
   }
 
   public void waitForReady(long timeout) throws InterpreterException {
@@ -1151,7 +1134,8 @@ public class InterpreterSetting {
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     StringWriter stringWriter = new StringWriter();
-    try(JsonWriter jsonWriter = new JsonWriter(stringWriter)){
+    JsonWriter jsonWriter = new JsonWriter(stringWriter);
+    try {
       // id
       jsonWriter.beginObject();
       jsonWriter.name("id");

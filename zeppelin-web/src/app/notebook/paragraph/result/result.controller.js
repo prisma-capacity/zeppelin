@@ -762,15 +762,14 @@ function ResultCtrl($scope, $rootScope, $route, $window, $routeParams, $location
     let newParagraphConfig = angular.copy(paragraph.config);
     newParagraphConfig.results = newParagraphConfig.results || [];
     newParagraphConfig.results[resultIndex] = config;
-
-    // local update without commit
-    updateData({
-      type: $scope.type,
-      data: data,
-    }, newParagraphConfig.results[resultIndex], paragraph, resultIndex);
-    renderResult($scope.type, true);
-
-    if ($scope.revisionView !== true) {
+    if ($scope.revisionView === true) {
+      // local update without commit
+      updateData({
+        type: $scope.type,
+        data: data,
+      }, newParagraphConfig.results[resultIndex], paragraph, resultIndex);
+      renderResult($scope.type, true);
+    } else {
       if (! $scope.viewOnly) {
         return websocketMsgSrv.commitParagraph(paragraph.id, title, text, newParagraphConfig, params);
       }

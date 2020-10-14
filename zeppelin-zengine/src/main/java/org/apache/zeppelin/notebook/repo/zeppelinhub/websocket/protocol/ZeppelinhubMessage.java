@@ -20,10 +20,9 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.common.JsonSerializable;
-import org.apache.zeppelin.common.Message;
-import org.apache.zeppelin.common.Message.OP;
 import org.apache.zeppelin.notebook.repo.zeppelinhub.websocket.Client;
-
+import org.apache.zeppelin.notebook.socket.Message;
+import org.apache.zeppelin.notebook.socket.Message.OP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

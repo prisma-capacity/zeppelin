@@ -155,12 +155,22 @@ public class IRInterpreter extends JupyterKernelInterpreter {
   public InterpreterResult shinyUI(String st,
                                    InterpreterContext context) throws InterpreterException {
     File uiFile = new File(shinyAppFolder, "ui.R");
-    try (FileWriter writer = new FileWriter(uiFile)){
+    FileWriter writer = null;
+    try {
+      writer = new FileWriter(uiFile);
       IOUtils.copy(new StringReader(st), writer);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS, "Write ui.R to "
               + shinyAppFolder.getAbsolutePath() + " successfully.");
     } catch (IOException e) {
       throw new InterpreterException("Fail to write shiny file ui.R", e);
+    } finally {
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (IOException e) {
+          throw new InterpreterException(e);
+        }
+      }
     }
   }
 

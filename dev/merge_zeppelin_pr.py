@@ -218,7 +218,7 @@ def fix_version_from_branch(branch, versions):
         return versions[0]
     else:
         branch_ver = branch.replace("branch-", "")
-        return list(filter(lambda x: x.name.startswith(branch_ver), versions))[-1]
+        return filter(lambda x: x.name.startswith(branch_ver), versions)[-1]
 
 
 def resolve_jira_issue(merge_branches, comment, default_jira_id=""):
@@ -250,11 +250,11 @@ def resolve_jira_issue(merge_branches, comment, default_jira_id=""):
 
     versions = asf_jira.project_versions("ZEPPELIN")
     versions = sorted(versions, key=lambda x: x.name, reverse=True)
-    versions = list(filter(lambda x: x.raw['released'] is False, versions))
+    versions = filter(lambda x: x.raw['released'] is False, versions)
     # Consider only x.y.z versions
-    versions = list(filter(lambda x: re.match('\d+\.\d+\.\d+', x.name), versions))
+    versions = filter(lambda x: re.match('\d+\.\d+\.\d+', x.name), versions)
 
-    default_fix_versions = set(map(lambda x: fix_version_from_branch(x, versions).name, merge_branches))
+    default_fix_versions = map(lambda x: fix_version_from_branch(x, versions).name, merge_branches)
     for v in default_fix_versions:
         # Handles the case where we have forked a release branch but not yet made the release.
         # In this case, if the PR is committed to the master branch and the release branch, we
@@ -264,7 +264,7 @@ def resolve_jira_issue(merge_branches, comment, default_jira_id=""):
         if patch == "0":
             previous = "%s.%s.%s" % (major, int(minor) - 1, 0)
             if previous in default_fix_versions:
-                default_fix_versions = list(filter(lambda x: x != v, default_fix_versions))
+                default_fix_versions = filter(lambda x: x != v, default_fix_versions)
     default_fix_versions = ",".join(default_fix_versions)
 
     fix_versions = input("Enter comma-separated fix version(s) [%s]: " % default_fix_versions)
@@ -273,11 +273,11 @@ def resolve_jira_issue(merge_branches, comment, default_jira_id=""):
     fix_versions = fix_versions.replace(" ", "").split(",")
 
     def get_version_json(version_str):
-        return list(filter(lambda v: v.name == version_str, versions))[0].raw
+        return filter(lambda v: v.name == version_str, versions)[0].raw
 
-    jira_fix_versions = list(map(lambda v: get_version_json(v), fix_versions))
+    jira_fix_versions = map(lambda v: get_version_json(v), fix_versions)
 
-    resolve = list(filter(lambda a: a['name'] == "Resolve Issue", asf_jira.transitions(jira_id)))[0]
+    resolve = filter(lambda a: a['name'] == "Resolve Issue", asf_jira.transitions(jira_id))[0]
     asf_jira.transition_issue(
         jira_id, resolve["id"], fixVersions=jira_fix_versions, comment=comment)
 

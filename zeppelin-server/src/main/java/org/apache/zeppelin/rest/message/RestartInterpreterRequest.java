@@ -24,9 +24,9 @@ import org.apache.zeppelin.common.JsonSerializable;
  * RestartInterpreter rest api request message.
  */
 public class RestartInterpreterRequest implements JsonSerializable {
-  private static final Gson GSON = new Gson();
+  private static final Gson gson = new Gson();
 
-  private String noteId;
+  String noteId;
 
   public RestartInterpreterRequest() {
   }
@@ -36,10 +36,10 @@ public class RestartInterpreterRequest implements JsonSerializable {
   }
 
   public String toJson() {
-    return GSON.toJson(this);
+    return gson.toJson(this);
   }
 
   public static RestartInterpreterRequest fromJson(String json) {
-    return GSON.fromJson(json, RestartInterpreterRequest.class);
+    return gson.fromJson(json, RestartInterpreterRequest.class);
   }
 }

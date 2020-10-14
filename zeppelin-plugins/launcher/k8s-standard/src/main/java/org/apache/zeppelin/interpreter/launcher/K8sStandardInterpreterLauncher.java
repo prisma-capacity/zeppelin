@@ -63,7 +63,7 @@ public class K8sStandardInterpreterLauncher extends InterpreterLauncher {
    * @return
    */
   boolean isRunningOnKubernetes() {
-    return new File(Config.KUBERNETES_NAMESPACE_PATH).exists();
+    return new File("/var/run/secrets/kubernetes.io").exists();
   }
 
   /**
@@ -152,7 +152,6 @@ public class K8sStandardInterpreterLauncher extends InterpreterLauncher {
             zConf.getK8sPortForward(),
             zConf.getK8sSparkContainerImage(),
             getConnectTimeout(),
-            getConnectPoolSize(),
             isUserImpersonateForSparkInterpreter(context));
   }
 

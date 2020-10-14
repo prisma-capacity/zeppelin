@@ -44,7 +44,6 @@ public class InterpreterResultMessageOutput extends OutputStream {
   private final InterpreterResultMessageOutputListener flushListener;
   private InterpreterResult.Type type = InterpreterResult.Type.TEXT;
   private boolean firstWrite = true;
-  private boolean enableTableAppend = true;
 
   public InterpreterResultMessageOutput(
       InterpreterResult.Type type,
@@ -61,10 +60,6 @@ public class InterpreterResultMessageOutput extends OutputStream {
     this.flushListener = flushListener;
     watcher = new InterpreterOutputChangeWatcher(listener);
     watcher.start();
-  }
-
-  public void setEnableTableAppend(boolean enableTableAppend) {
-    this.enableTableAppend = enableTableAppend;
   }
 
   public InterpreterResult.Type getType() {
@@ -245,7 +240,7 @@ public class InterpreterResultMessageOutput extends OutputStream {
   }
 
   public boolean isAppendSupported() {
-    return type == InterpreterResult.Type.TEXT || (type == InterpreterResult.Type.TABLE && enableTableAppend);
+    return type == InterpreterResult.Type.TEXT || type == InterpreterResult.Type.TABLE;
   }
 
   private void copyStream(InputStream in, OutputStream out) throws IOException {

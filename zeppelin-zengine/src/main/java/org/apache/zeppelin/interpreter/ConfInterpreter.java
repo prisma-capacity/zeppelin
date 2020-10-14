@@ -31,7 +31,7 @@ import java.util.Properties;
  */
 public class ConfInterpreter extends Interpreter {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConfInterpreter.class);
+  private static Logger LOGGER = LoggerFactory.getLogger(ConfInterpreter.class);
 
   protected String sessionId;
   protected String interpreterGroupId;
@@ -68,7 +68,8 @@ public class ConfInterpreter extends Interpreter {
       Properties newProperties = new Properties();
       newProperties.load(new StringReader(st));
       finalProperties.putAll(newProperties);
-      LOGGER.debug("Properties for InterpreterGroup: {} is {}", interpreterGroupId, finalProperties);
+      LOGGER.debug("Properties for InterpreterGroup: " + interpreterGroupId + " is "
+          + finalProperties);
       interpreterSetting.setInterpreterGroupProperties(interpreterGroupId, finalProperties);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS);
     } catch (IOException e) {

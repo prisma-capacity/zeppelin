@@ -41,16 +41,15 @@ import org.apache.zeppelin.interpreter.thrift.OutputUpdateAllEvent;
 import org.apache.zeppelin.interpreter.thrift.OutputUpdateEvent;
 import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterEventService;
 import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterResultMessage;
+import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService;
 import org.apache.zeppelin.interpreter.thrift.RunParagraphsEvent;
 import org.apache.zeppelin.interpreter.thrift.ServiceException;
-import org.apache.zeppelin.interpreter.thrift.WebUrlInfo;
 import org.apache.zeppelin.notebook.Note;
 import org.apache.zeppelin.resource.RemoteResource;
 import org.apache.zeppelin.resource.Resource;
 import org.apache.zeppelin.resource.ResourceId;
 import org.apache.zeppelin.resource.ResourcePool;
 import org.apache.zeppelin.resource.ResourceSet;
-import org.apache.zeppelin.user.AuthenticationInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +66,6 @@ import java.util.concurrent.TimeUnit;
 public class RemoteInterpreterEventServer implements RemoteInterpreterEventService.Iface {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteInterpreterEventServer.class);
-  private static final Gson GSON = new Gson();
 
   private String portRange;
   private int port;
@@ -81,7 +79,7 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
   private AppendOutputRunner runner;
   private final RemoteInterpreterProcessListener listener;
   private final ApplicationEventListener appListener;
-
+  private final Gson gson = new Gson();
 
   public RemoteInterpreterEventServer(ZeppelinConfiguration zConf,
                                       InterpreterSettingManager interpreterSettingManager) {
@@ -175,17 +173,6 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
   }
 
   @Override
-  public void sendWebUrl(WebUrlInfo weburlInfo) throws TException {
-    InterpreterGroup interpreterGroup =
-            interpreterSettingManager.getInterpreterGroupById(weburlInfo.getInterpreterGroupId());
-    if (interpreterGroup == null) {
-      LOGGER.warn("No such interpreterGroup: " + weburlInfo.getInterpreterGroupId());
-      return;
-    }
-    interpreterGroup.setWebUrl(weburlInfo.getWeburl());
-  }
-
-  @Override
   public void appendOutput(OutputAppendEvent event) throws TException {
     if (event.getAppId() == null) {
       runner.appendBuffer(
@@ -262,8 +249,7 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
     InterpreterGroup interpreterGroup =
         interpreterSettingManager.getInterpreterGroupById(intpGroupId);
     if (interpreterGroup == null) {
-      LOGGER.warn("Invalid InterpreterGroupId: " + intpGroupId);
-      return;
+      throw new TException("Invalid InterpreterGroupId: " + intpGroupId);
     }
     interpreterGroup.getAngularObjectRegistry().add(angularObject.getName(),
         angularObject.get(), angularObject.getNoteId(), angularObject.getParagraphId());
@@ -335,12 +321,13 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
       throw new TException("Invalid InterpreterGroupId: " + intpGroupId);
     }
 
-    Map<String, String> paraInfos = GSON.fromJson(json,
+    Map<String, String> paraInfos = gson.fromJson(json,
         new TypeToken<Map<String, String>>() {
         }.getType());
     String noteId = paraInfos.get("noteId");
     String paraId = paraInfos.get("paraId");
-    String settingId = ((ManagedInterpreterGroup) interpreterGroup).getInterpreterSetting().getId();
+    String settingId = RemoteInterpreterUtils.
+        getInterpreterSettingId(interpreterGroup.getId());
     if (noteId != null && paraId != null && settingId != null) {
       listener.onParaInfosReceived(noteId, paraId, settingId, paraInfos);
     }
@@ -514,18 +501,5 @@ public class RemoteInterpreterEventServer implements RemoteInterpreterEventServi
       }
     }
     return resourceSet;
-  }
-
-  @Override
-  public void updateParagraphConfig(String noteId,
-                                    String paragraphId,
-                                    Map<String, String> config) throws TException {
-    try {
-      Note note = interpreterSettingManager.getNotebook().getNote(noteId);
-      note.getParagraph(paragraphId).updateConfig(config);
-      interpreterSettingManager.getNotebook().saveNote(note, AuthenticationInfo.ANONYMOUS);
-    } catch (Exception e) {
-      LOGGER.error("Fail to updateParagraphConfig", e);
-    }
   }
 }

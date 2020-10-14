@@ -26,12 +26,10 @@ import org.apache.zeppelin.common.JsonSerializable;
  *  NewNoteRequest rest api request message.
  */
 public class NewNoteRequest implements JsonSerializable {
-  private static final Gson GSON = new Gson();
+  private static final Gson gson = new Gson();
 
-  //TODO(zjffdu) rename it to be notePath instead of name
-  private String name;
-  private String defaultInterpreterGroup;
-  private List<NewParagraphRequest> paragraphs;
+  String name;
+  List<NewParagraphRequest> paragraphs;
 
   public NewNoteRequest (){
   }
@@ -40,19 +38,15 @@ public class NewNoteRequest implements JsonSerializable {
     return name;
   }
 
-  public String getDefaultInterpreterGroup() {
-    return defaultInterpreterGroup;
-  }
-
   public List<NewParagraphRequest> getParagraphs() {
     return paragraphs;
   }
 
   public String toJson() {
-    return GSON.toJson(this);
+    return gson.toJson(this);
   }
 
   public static NewNoteRequest fromJson(String json) {
-    return GSON.fromJson(json, NewNoteRequest.class);
+    return gson.fromJson(json, NewNoteRequest.class);
   }
 }

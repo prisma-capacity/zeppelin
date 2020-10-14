@@ -31,7 +31,7 @@ import org.apache.zeppelin.notebook.NoteInfo;
 import org.apache.zeppelin.notebook.NotebookImportDeserializer;
 import org.apache.zeppelin.notebook.Paragraph;
 import org.apache.zeppelin.notebook.AuthorizationService;
-import org.apache.zeppelin.common.Message;
+import org.apache.zeppelin.notebook.socket.Message;
 import org.apache.zeppelin.notebook.socket.WatcherMessage;
 import org.apache.zeppelin.user.AuthenticationInfo;
 import org.apache.zeppelin.util.WatcherSecurityKey;
@@ -343,7 +343,7 @@ public class ConnectionManager {
     broadcastToWatchers(StringUtils.EMPTY, StringUtils.EMPTY, m);
   }
 
-  public void unicastParagraph(Note note, Paragraph p, String user, String msgId) {
+  public void unicastParagraph(Note note, Paragraph p, String user) {
     if (!note.isPersonalizedMode() || p == null || user == null) {
       return;
     }
@@ -354,7 +354,7 @@ public class ConnectionManager {
     }
 
     for (NotebookSocket conn : userSocketMap.get(user)) {
-      Message m = new Message(Message.OP.PARAGRAPH).withMsgId(msgId).put("paragraph", p);
+      Message m = new Message(Message.OP.PARAGRAPH).put("paragraph", p);
       unicast(m, conn);
     }
   }

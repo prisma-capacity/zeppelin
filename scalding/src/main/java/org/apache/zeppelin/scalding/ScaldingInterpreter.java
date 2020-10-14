@@ -49,7 +49,7 @@ import org.apache.zeppelin.scheduler.SchedulerFactory;
  *
  */
 public class ScaldingInterpreter extends Interpreter {
-  public static final Logger LOGGER = LoggerFactory.getLogger(ScaldingInterpreter.class);
+  Logger logger = LoggerFactory.getLogger(ScaldingInterpreter.class);
 
   static final String ARGS_STRING = "args.string";
   static final String ARGS_STRING_DEFAULT = "--local --repl";
@@ -76,15 +76,15 @@ public class ScaldingInterpreter extends Interpreter {
     try {
       maxOpenInstances = Integer.valueOf(maxOpenInstancesStr);
     } catch (Exception e) {
-      LOGGER.error("Error reading max.open.instances", e);
+      logger.error("Error reading max.open.instances", e);
     }
-    LOGGER.info("max.open.instances = {}", maxOpenInstances);
+    logger.info("max.open.instances = {}", maxOpenInstances);
     if (numOpenInstances > maxOpenInstances) {
-      LOGGER.error("Reached maximum number of open instances");
+      logger.error("Reached maximum number of open instances");
       return;
     }
-    LOGGER.info("Opening instance {}", numOpenInstances);
-    LOGGER.info("property: {}", getProperties());
+    logger.info("Opening instance {}", numOpenInstances);
+    logger.info("property: {}", getProperties());
     String argsString = getProperty(ARGS_STRING, ARGS_STRING_DEFAULT);
     String[] args;
     if (argsString == null) {
@@ -92,7 +92,7 @@ public class ScaldingInterpreter extends Interpreter {
     } else {
       args = argsString.split(" ");
     }
-    LOGGER.info("{}", Arrays.toString(args));
+    logger.info("{}", Arrays.toString(args));
 
     PrintWriter printWriter = new PrintWriter(out, true);
     interpreter = ZeppelinScaldingShell.getRepl(args, printWriter);
@@ -108,10 +108,10 @@ public class ScaldingInterpreter extends Interpreter {
   @Override
   public InterpreterResult interpret(String cmd, InterpreterContext contextInterpreter) {
     String user = contextInterpreter.getAuthenticationInfo().getUser();
-    LOGGER.info("Running Scalding command: user: {} cmd: '{}'", user, cmd);
+    logger.info("Running Scalding command: user: {} cmd: '{}'", user, cmd);
 
     if (interpreter == null) {
-      LOGGER.error(
+      logger.error(
           "interpreter == null, open may not have been called because max.open.instances reached");
       return new InterpreterResult(Code.ERROR,
         "interpreter == null\n" +
@@ -127,7 +127,7 @@ public class ScaldingInterpreter extends Interpreter {
       try {
         ugi = UserGroupInformation.createProxyUser(user, UserGroupInformation.getLoginUser());
       } catch (IOException e) {
-        LOGGER.error("Error creating UserGroupInformation", e);
+        logger.error("Error creating UserGroupInformation", e);
         return new InterpreterResult(Code.ERROR, e.getMessage());
       }
       try {
@@ -137,14 +137,13 @@ public class ScaldingInterpreter extends Interpreter {
         final InterpreterContext contextInterpreter1 = contextInterpreter;
         PrivilegedExceptionAction<InterpreterResult> action =
             new PrivilegedExceptionAction<InterpreterResult>() {
-              @Override
               public InterpreterResult run() throws Exception {
                 return interpret(cmd1.split("\n"), contextInterpreter1);
               }
             };
         interpreterResult = ugi.doAs(action);
       } catch (Exception e) {
-        LOGGER.error("Error running command with ugi.doAs", e);
+        logger.error("Error running command with ugi.doAs", e);
         return new InterpreterResult(Code.ERROR, e.getMessage());
       }
     } else {
@@ -216,7 +215,7 @@ public class ScaldingInterpreter extends Interpreter {
       try {
         res = interpreter.intp().interpret(incomplete + s);
       } catch (Exception e) {
-        LOGGER.error("Interpreter exception: ", e);
+        logger.error("Interpreter exception: ", e);
         return new InterpreterResult(Code.ERROR, e.getMessage());
       }
 

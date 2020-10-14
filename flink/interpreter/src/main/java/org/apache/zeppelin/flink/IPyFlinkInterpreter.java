@@ -89,7 +89,7 @@ public class IPyFlinkInterpreter extends IPythonInterpreter {
         throw new InterpreterException("Fail to initJavaThread: " +
                 result.toString());
       }
-      flinkInterpreter.setSavepointIfNecessary(context);
+      flinkInterpreter.setSavePointIfNecessary(context);
       flinkInterpreter.setParallelismIfNecessary(context);
       return super.internalInterpret(st, context);
     } finally {

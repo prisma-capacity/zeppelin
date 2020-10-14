@@ -63,11 +63,10 @@ public class RemoteInterpreterManagedProcess extends RemoteInterpreterProcess {
       String localRepoDir,
       Map<String, String> env,
       int connectTimeout,
-      int connectionPoolSize,
       String interpreterSettingName,
       String interpreterGroupId,
       boolean isUserImpersonated) {
-    super(connectTimeout, connectionPoolSize, intpEventServerHost, intpEventServerPort);
+    super(connectTimeout, intpEventServerHost, intpEventServerPort);
     this.interpreterRunner = intpRunner;
     this.interpreterPortRange = interpreterPortRange;
     this.env = env;
