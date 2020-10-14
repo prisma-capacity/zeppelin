@@ -203,7 +203,6 @@ public class JobManager {
     @Override
     public void run() {
       while (!Thread.currentThread().isInterrupted() && running.get()) {
-
         JsonNode rootNode = null;
         try {
           synchronized (running) {

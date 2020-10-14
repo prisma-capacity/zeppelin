@@ -17,12 +17,17 @@
 package org.apache.zeppelin.rest;
 
 import com.google.gson.Gson;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.SecurityUtils;
+import org.apache.zeppelin.annotation.ZeppelinApi;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.realm.cognito.CognitoUser;
+import org.apache.zeppelin.server.JsonResponse;
+import org.apache.zeppelin.service.AuthenticationService;
+import org.apache.zeppelin.ticket.TicketContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
@@ -30,14 +35,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.zeppelin.annotation.ZeppelinApi;
-import org.apache.zeppelin.conf.ZeppelinConfiguration;
-import org.apache.zeppelin.server.JsonResponse;
-import org.apache.zeppelin.service.AuthenticationService;
-import org.apache.zeppelin.ticket.TicketContainer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.*;
 
 /**
  * Zeppelin security rest api endpoint.
@@ -84,6 +82,11 @@ public class SecurityRestApi {
     data.put("principal", principal);
     data.put("roles", gson.toJson(roles));
     data.put("ticket", ticket);
+
+    CognitoUser user = (CognitoUser) SecurityUtils.getSubject().getPrincipals().getPrimaryPrincipal();
+    if(user != null){
+      data.put("cognitoSession", user.getCognitoMfaToken());
+    }
 
     response = new JsonResponse(Response.Status.OK, "", data);
     LOG.warn(response.toString());

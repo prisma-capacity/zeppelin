@@ -753,7 +753,7 @@
 
 <property>
   <name>zeppelin.k8s.container.image</name>
-  <value>apache/zeppelin:0.9.0-SNAPSHOT</value>
+  <value>apache/zeppelin:0.9.0-preview2</value>
   <description>Docker image for interpreters</description>
 </property>
 

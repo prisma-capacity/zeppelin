@@ -35,7 +35,6 @@ import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.apache.shiro.subject.Subject;
 import org.apache.zeppelin.annotation.ZeppelinApi;
-import org.apache.zeppelin.realm.CognitoRealm;
 import org.apache.zeppelin.server.JsonResponse;
 import org.apache.zeppelin.util.Util;
 import org.slf4j.LoggerFactory;
